@@ -1,0 +1,763 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================================================================
+   EcoPlants Design System
+
+   Token architecture mirrors the GoldChin system: OKLCH primitives, a semantic
+   layer over them, and a shadcn contract mapped onto both. Components consume
+   the semantic names only — that indirection is what makes a future dark theme
+   a token change instead of a component sweep.
+
+   Authored in OKLCH rather than hex for the same reason Gold is: this palette
+   lives on one warm axis (clay → sand → cream), and hex ramps drift grey
+   through the mid-tones. OKLCH holds perceptual lightness across the ramp.
+
+   Every text pair is asserted in scripts/check-contrast.mjs, which parses these
+   OKLCH values directly. Run `npm run check:contrast` before changing a colour.
+   ========================================================================= */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ==========================================================================
+     PRIMITIVES — Clay ramp (the accent, the 10%)
+     Terracotta. Chroma peaks mid-ramp; hue drifts toward warm orange in the
+     tints and burnt umber in the shades, the way fired clay actually reads.
+     ========================================================================== */
+  --color-clay-50: oklch(0.968 0.012 45);
+  --color-clay-100: oklch(0.933 0.028 42);
+  --color-clay-200: oklch(0.869 0.056 41);
+  --color-clay-300: oklch(0.792 0.086 40);
+  --color-clay-400: oklch(0.723 0.106 40);
+  --color-clay-500: oklch(0.663 0.117 39); /* brand terracotta */
+  --color-clay-600: oklch(0.566 0.113 38);
+  --color-clay-700: oklch(0.503 0.099 37);
+  --color-clay-800: oklch(0.424 0.081 36);
+  --color-clay-900: oklch(0.353 0.063 35);
+  --color-clay-950: oklch(0.253 0.044 34);
+
+  /* --------------------------------------------------------------------------
+     Leaf ramp (the structure, the 30%)
+     Sage through deep forest. Deliberately desaturated — a saturated leaf green
+     is the "generic nursery" signal the whole brand direction avoids.
+     -------------------------------------------------------------------------- */
+  --color-leaf-50: oklch(0.972 0.012 133);
+  --color-leaf-100: oklch(0.943 0.022 132);
+  --color-leaf-200: oklch(0.888 0.038 131);
+  --color-leaf-300: oklch(0.822 0.052 130);
+  --color-leaf-400: oklch(0.752 0.062 129); /* brand sage */
+  --color-leaf-500: oklch(0.672 0.065 128);
+  --color-leaf-600: oklch(0.586 0.062 129);
+  --color-leaf-700: oklch(0.489 0.055 132);
+  --color-leaf-800: oklch(0.398 0.047 135);
+  --color-leaf-900: oklch(0.322 0.039 140);
+  --color-leaf-950: oklch(0.228 0.030 145);
+
+  /* --------------------------------------------------------------------------
+     Ink — warm neutrals, never pure grey. Cold grey beside terracotta reads
+     like newsprint and flattens the warmth out of the whole palette. A trace of
+     chroma at h≈60 keeps the neutrals in the same family as the accent.
+     -------------------------------------------------------------------------- */
+  --color-ink-50: oklch(0.984 0.003 70);
+  --color-ink-100: oklch(0.963 0.005 68);
+  --color-ink-200: oklch(0.921 0.007 66);
+  --color-ink-300: oklch(0.862 0.009 64);
+  --color-ink-400: oklch(0.706 0.011 62);
+  --color-ink-500: oklch(0.543 0.013 60);
+  --color-ink-600: oklch(0.457 0.014 58);
+  --color-ink-700: oklch(0.374 0.015 56);
+  --color-ink-800: oklch(0.281 0.013 54);
+  --color-ink-900: oklch(0.218 0.011 52);
+  --color-ink-950: oklch(0.152 0.009 50);
+
+  /* --------------------------------------------------------------------------
+     Sand — the warm paper tones that carry the 60%.
+     -------------------------------------------------------------------------- */
+  --color-sand-50: oklch(0.968 0.010 80);
+  --color-sand-100: oklch(0.930 0.022 78);
+  --color-sand-200: oklch(0.881 0.036 76);
+  --color-sand-300: oklch(0.822 0.046 74);
+
+  /* --------------------------------------------------------------------------
+     Status — desaturated to sit inside a restrained palette. A saturated alert
+     colour beside terracotta reads as an error dialog, not a plant shop.
+     -------------------------------------------------------------------------- */
+  --color-success: oklch(0.539 0.104 152);
+  --color-success-soft: oklch(0.953 0.028 152);
+  --color-warning: oklch(0.559 0.108 72);
+  --color-warning-soft: oklch(0.958 0.032 78);
+  --color-danger: oklch(0.552 0.158 27);
+  --color-danger-soft: oklch(0.955 0.020 27);
+  --color-info: oklch(0.578 0.092 235);
+  --color-info-soft: oklch(0.955 0.022 235);
+
+  /* ==========================================================================
+     SEMANTIC TOKENS — what components are allowed to consume
+     ========================================================================== */
+  --canvas: oklch(0.983 0.006 85); /* warm cream page ground */
+  --surface: oklch(1 0 0);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.966 0.010 82);
+  --surface-inverse: var(--color-leaf-950);
+
+  --text-primary: var(--color-ink-950);
+  --text-secondary: var(--color-ink-700);
+  --text-tertiary: var(--color-ink-500);
+  --text-inverse: var(--color-ink-50);
+  --text-accent: var(--color-clay-700);
+
+  --border-subtle: oklch(0.925 0.008 80);
+  --border-default: oklch(0.878 0.012 78);
+  --border-strong: oklch(0.653 0.016 76);
+  --border-accent: var(--color-clay-300);
+
+  /* ==========================================================================
+     SHADCN/UI CONTRACT
+     Stock shadcn components read these names. Mapped onto the EcoPlants palette
+     so they inherit the brand without being hand-edited.
+     ========================================================================== */
+  --background: var(--canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--color-ink-950);
+  --primary-foreground: var(--color-ink-50);
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--color-ink-900);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--text-tertiary);
+  --accent: var(--color-leaf-100);
+  --accent-foreground: var(--color-leaf-900);
+  --destructive: var(--color-danger);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--color-clay-600);
+
+  --chart-1: var(--color-leaf-600);
+  --chart-2: var(--color-clay-500);
+  --chart-3: var(--color-leaf-800);
+  --chart-4: var(--color-ink-400);
+  --chart-5: var(--color-sand-200);
+
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--color-ink-950);
+  --sidebar-primary-foreground: var(--color-ink-50);
+  --sidebar-accent: var(--surface-sunken);
+  --sidebar-accent-foreground: var(--color-ink-900);
+  --sidebar-border: var(--border-subtle);
+  --sidebar-ring: var(--color-clay-600);
+
+  /* ==========================================================================
+     RADIUS — restrained. Heavy rounding reads consumer-app; the reference
+     points here are botanical plate books and seed catalogues, which are
+     near-square. 4px base, same as Gold.
+     ========================================================================== */
+  --radius: 0.25rem;
+
+  /* ==========================================================================
+     ELEVATION — warm-tinted, never pure black. Black shadow on a cream canvas
+     reads as dirt.
+     ========================================================================== */
+  --shadow-subtle: 0 1px 2px 0 oklch(0.28 0.02 55 / 0.04);
+  --shadow-card:
+    0 1px 3px 0 oklch(0.28 0.02 55 / 0.05),
+    0 1px 2px -1px oklch(0.28 0.02 55 / 0.04);
+  --shadow-raised:
+    0 4px 12px -2px oklch(0.28 0.02 55 / 0.07),
+    0 2px 4px -2px oklch(0.28 0.02 55 / 0.04);
+  --shadow-overlay:
+    0 16px 40px -8px oklch(0.28 0.02 55 / 0.14),
+    0 4px 12px -4px oklch(0.28 0.02 55 / 0.06);
+  --shadow-clay: 0 4px 20px -4px oklch(0.663 0.117 39 / 0.26);
+
+  /* ==========================================================================
+     MOTION — 200–400ms, ease-out, no spring, no bounce.
+     ========================================================================== */
+  --ease-out-refined: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-refined: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --duration-deliberate: 600ms;
+
+  /* Hairline that fades at both ends — separates sections without the hard
+     edge of a full-width border. */
+  --gradient-leaf-rule: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-leaf-400) 24%,
+    var(--color-leaf-600) 50%,
+    var(--color-leaf-400) 76%,
+    transparent 100%
+  );
+  --gradient-clay-rule: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-clay-300) 24%,
+    var(--color-clay-500) 50%,
+    var(--color-clay-300) 76%,
+    transparent 100%
+  );
+}
+
+/* ============================================================================
+   THEME MAPPING — exposes tokens to Tailwind utilities
+   ========================================================================= */
+@theme inline {
+  --color-clay-50: var(--color-clay-50);
+  --color-clay-100: var(--color-clay-100);
+  --color-clay-200: var(--color-clay-200);
+  --color-clay-300: var(--color-clay-300);
+  --color-clay-400: var(--color-clay-400);
+  --color-clay-500: var(--color-clay-500);
+  --color-clay-600: var(--color-clay-600);
+  --color-clay-700: var(--color-clay-700);
+  --color-clay-800: var(--color-clay-800);
+  --color-clay-900: var(--color-clay-900);
+  --color-clay-950: var(--color-clay-950);
+
+  --color-leaf-50: var(--color-leaf-50);
+  --color-leaf-100: var(--color-leaf-100);
+  --color-leaf-200: var(--color-leaf-200);
+  --color-leaf-300: var(--color-leaf-300);
+  --color-leaf-400: var(--color-leaf-400);
+  --color-leaf-500: var(--color-leaf-500);
+  --color-leaf-600: var(--color-leaf-600);
+  --color-leaf-700: var(--color-leaf-700);
+  --color-leaf-800: var(--color-leaf-800);
+  --color-leaf-900: var(--color-leaf-900);
+  --color-leaf-950: var(--color-leaf-950);
+
+  --color-ink-50: var(--color-ink-50);
+  --color-ink-100: var(--color-ink-100);
+  --color-ink-200: var(--color-ink-200);
+  --color-ink-300: var(--color-ink-300);
+  --color-ink-400: var(--color-ink-400);
+  --color-ink-500: var(--color-ink-500);
+  --color-ink-600: var(--color-ink-600);
+  --color-ink-700: var(--color-ink-700);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-900: var(--color-ink-900);
+  --color-ink-950: var(--color-ink-950);
+
+  --color-sand-50: var(--color-sand-50);
+  --color-sand-100: var(--color-sand-100);
+  --color-sand-200: var(--color-sand-200);
+  --color-sand-300: var(--color-sand-300);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-accent: var(--text-accent);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-accent: var(--border-accent);
+
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-info: var(--color-info);
+  --color-info-soft: var(--color-info-soft);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  /* Type faces. Latin faces load via next/font; the CJK fallbacks are system
+     faces so the zh locale never renders in a face without glyph coverage.
+     Fraunces was kept over Playfair because the roman/italic accent pattern
+     needs a true drawn italic, and its optical-size axis holds up at display
+     sizes without going spindly. */
+  --font-display:
+    var(--font-fraunces), "Songti SC", "Noto Serif CJK SC",
+    "Source Han Serif SC", "SimSun", ui-serif, Georgia, serif;
+  --font-sans:
+    var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+
+  /* Fluid display scale. Runs large on purpose — a plant catalogue that sets
+     its headings at 32px reads like a spreadsheet of stock. */
+  --text-display-xl: clamp(3rem, 1.55rem + 6vw, 6.25rem);
+  --text-display-lg: clamp(2.5rem, 1.5rem + 4.2vw, 4.75rem);
+  --text-display-md: clamp(2rem, 1.35rem + 2.8vw, 3.5rem);
+  --text-display-sm: clamp(1.625rem, 1.2rem + 1.8vw, 2.5rem);
+
+  --shadow-subtle: var(--shadow-subtle);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-overlay: var(--shadow-overlay);
+  --shadow-clay: var(--shadow-clay);
+
+  --ease-refined: var(--ease-out-refined);
+  --ease-refined-in-out: var(--ease-in-out-refined);
+
+  /* Section rhythm — 96px desktop / 48px mobile minimum. Whitespace is the
+     layout; density is the enemy of perceived value. */
+  --spacing-section: clamp(3rem, 1.5rem + 6vw, 7.5rem);
+  --spacing-section-lg: clamp(4rem, 2rem + 8vw, 10rem);
+}
+
+/* ============================================================================
+   BASE
+   ========================================================================= */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border-default);
+  }
+
+  html {
+    /* No `scroll-behavior: smooth` here. Lenis owns smooth scrolling, and a
+       smooth root behaviour turns the App Router's scroll-to-top into an
+       interruptible animation that routinely never lands — clicking a nav item
+       leaves you halfway down the previous page. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv05", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Every price, size, temperature and count aligns in columns. Non-tabular
+     figures in a price list are the fastest way to look unconsidered. */
+  .numeric,
+  th[data-numeric],
+  td[data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-clay-600);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-clay-200);
+    color: var(--color-ink-950);
+  }
+
+  /* Plant photography is the product. Never let it stretch. */
+  img {
+    object-fit: cover;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ============================================================================
+   COMPONENT PRIMITIVES
+   ========================================================================= */
+@layer components {
+  .rule-leaf {
+    height: 1px;
+    background: var(--gradient-leaf-rule);
+    border: 0;
+  }
+
+  /* Roman/italic mixing inside a single headline — "Plants that *actually
+     live*". A span rather than <em>, because this is a typographic flourish
+     and not emphasis; <em> would make a screen reader stress the word. */
+  .display-accent {
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.012em;
+  }
+
+  /* Token remap for chrome sitting over a dark surface it does not own — the
+     header floating above the hero. Without this the nav keeps the light-theme
+     ink tokens and renders near-invisible on the dark ground. */
+  .on-dark-tokens,
+  .on-dark {
+    --text-primary: var(--color-ink-50);
+    --text-secondary: oklch(0.862 0.009 64);
+    --text-tertiary: oklch(0.706 0.011 62);
+    --text-accent: var(--color-leaf-300);
+    --surface: oklch(0.262 0.032 143);
+    --surface-sunken: oklch(0.206 0.028 144);
+    --border-subtle: oklch(0.318 0.034 142);
+    --border-default: oklch(0.362 0.036 142);
+  }
+
+  .on-dark {
+    background-color: var(--color-leaf-950);
+    color: var(--color-ink-50);
+  }
+
+  /* Film grain. A flat digital gradient behind photographed foliage looks
+     synthetic; a little noise puts it back in the physical world. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Ambient page ground. Three very low-opacity radial washes fixed behind the
+     document, so scrolling reveals a slowly shifting field rather than flat
+     paper. Kept under 4% alpha — at that strength it registers as depth rather
+     than as a gradient, which is the difference between expensive and cheap. */
+  .page-ambient::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        58% 44% at 12% 8%,
+        oklch(0.822 0.052 130 / 0.16) 0%,
+        transparent 62%
+      ),
+      radial-gradient(
+        52% 40% at 88% 32%,
+        oklch(0.792 0.086 40 / 0.09) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        64% 50% at 46% 96%,
+        oklch(0.888 0.038 131 / 0.14) 0%,
+        transparent 66%
+      );
+  }
+
+  /* One shared hover physics for every actionable surface — inconsistent hover
+     behaviour is one of the fastest ways a page reads as assembled rather than
+     designed. */
+  .sheen {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    transform: translateX(-120%) skewX(-18deg);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(1 0 0 / 0.28) 50%,
+      transparent 100%
+    );
+    transition: transform 850ms var(--ease-out-refined);
+  }
+  .sheen:hover::after,
+  .sheen:focus-visible::after {
+    transform: translateX(120%) skewX(-18deg);
+  }
+
+  /* Rise-and-fade for content that must never be missing.
+     Deliberately CSS rather than a JS animation: a motion `initial` state
+     writes opacity:0 into the server-rendered HTML, so if the bundle fails the
+     content is invisible. A keyframe starts from the visible resting state, so
+     the worst case is simply no animation. */
+  @keyframes ep-rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .rise-in {
+    animation: ep-rise-in 0.45s var(--ease-out-refined) both;
+  }
+
+  @keyframes ep-rise-in-lg {
+    from {
+      opacity: 0;
+      transform: translateY(26px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .rise-in-lg {
+    animation: ep-rise-in-lg 0.9s var(--ease-out-refined) both;
+  }
+
+  /* Route transition. Lives on a template.tsx, which Next remounts on every
+     navigation, so the animation replays without client-side router plumbing.
+     Short and mostly opacity — a big translate on a full page reads as the
+     layout being unstable, not as polish. */
+  @keyframes ep-page-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  .page-enter {
+    animation: ep-page-enter 0.42s var(--ease-out-refined) both;
+  }
+
+  /* The auth card turning over.
+     Used when /login and /signup swap inside the shared auth layout: the panel
+     beside it does not move, so the form reads as the card being turned rather
+     than as a new page. Perspective comes from the parent.
+
+     A CSS keyframe rather than a motion component on purpose. A JS entrance
+     that starts at opacity 0 leaves the form invisible until the bundle
+     hydrates — which is exactly what a login page must never do. */
+  @keyframes ep-card-turn {
+    from {
+      opacity: 0;
+      transform: rotateY(-14deg) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: rotateY(0) translateY(0);
+    }
+  }
+
+  .card-turn {
+    transform-origin: left center;
+    animation: ep-card-turn 0.55s var(--ease-out-refined) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise-in,
+    .rise-in-lg,
+    .page-enter,
+    .card-turn {
+      animation: none;
+    }
+  }
+
+  /* Page gutter. Every top-level section uses this so the vertical edge is
+     consistent across the entire site. */
+  .container-page {
+    --container-pad: clamp(1.25rem, 0.5rem + 3vw, 4rem);
+    width: 100%;
+    margin-inline: auto;
+    max-width: 90rem;
+    padding-inline: var(--container-pad);
+  }
+
+  .container-narrow {
+    --container-pad: clamp(1.25rem, 0.5rem + 3vw, 4rem);
+    width: 100%;
+    margin-inline: auto;
+    max-width: 48rem;
+    padding-inline: var(--container-pad);
+  }
+}
+
+/* ============================================================================
+   UTILITIES
+   ========================================================================= */
+@utility section-y {
+  padding-block: var(--spacing-section);
+}
+
+@utility section-y-lg {
+  padding-block: var(--spacing-section-lg);
+}
+
+/* Horizontal scroll strips (filter chips, care rails) scroll without showing a
+   bar — the affordance is the cut-off pill peeking at the edge. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Plant imagery sits on a warm ground rather than pure white — foliage
+   photographed on white loses its edge definition. */
+@utility media-ground {
+  background: linear-gradient(
+    160deg,
+    var(--color-ink-50) 0%,
+    var(--color-leaf-50) 55%,
+    var(--color-sand-50) 100%
+  );
+}
+
+/* ============================================================================
+   HERO MOTION — Ken Burns on the base plate, opposing drifts on the overlays.
+   Decorative only, so everything gates on reduced-motion.
+   ========================================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes ep-kenburns {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.08);
+    }
+  }
+  .hero-kenburns {
+    animation: ep-kenburns 28s ease-in-out infinite alternate;
+  }
+  @keyframes ep-drift {
+    from {
+      transform: translate3d(-1.75%, 0.5%, 0);
+    }
+    to {
+      transform: translate3d(1.75%, -0.5%, 0);
+    }
+  }
+  .hero-drift-slow {
+    animation: ep-drift 20s ease-in-out infinite alternate;
+  }
+  .hero-drift-slower {
+    animation: ep-drift 34s ease-in-out infinite alternate-reverse;
+  }
+}
+
+/* ============================================================================
+   ADMIN PANEL — the panel runs monochrome; the clay stays in the shop window.
+   A scoped token override: inside this subtree every clay-* utility and warm
+   semantic token resolves to neutral grey, so the whole panel desaturates
+   without touching a single component.
+
+   In a working tool a warm accent on every other control is noise, and it
+   competes with the one place colour should carry meaning — order status.
+   ========================================================================= */
+.admin-mono {
+  --canvas: oklch(0.985 0 0);
+  --surface: oklch(1 0 0);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.968 0 0);
+  --border-subtle: oklch(0.926 0 0);
+  --border-default: oklch(0.884 0 0);
+  --border-strong: oklch(0.653 0 0);
+  --border-accent: oklch(0.79 0 0);
+  --text-primary: oklch(0.152 0 0);
+  --text-secondary: oklch(0.374 0 0);
+  --text-tertiary: oklch(0.543 0 0);
+  --text-accent: oklch(0.218 0 0);
+  --accent: oklch(0.955 0 0);
+  --accent-foreground: oklch(0.2 0 0);
+  --ring: oklch(0.45 0 0);
+
+  --color-clay-50: oklch(0.964 0 0);
+  --color-clay-100: oklch(0.936 0 0);
+  --color-clay-200: oklch(0.886 0 0);
+  --color-clay-300: oklch(0.816 0 0);
+  --color-clay-400: oklch(0.72 0 0);
+  --color-clay-500: oklch(0.585 0 0);
+  --color-clay-600: oklch(0.48 0 0);
+  --color-clay-700: oklch(0.385 0 0);
+  --color-clay-800: oklch(0.3 0 0);
+  --color-clay-900: oklch(0.23 0 0);
+  --color-clay-950: oklch(0.16 0 0);
+
+  --color-leaf-50: oklch(0.966 0 0);
+  --color-leaf-100: oklch(0.94 0 0);
+  --color-leaf-300: oklch(0.82 0 0);
+  --color-leaf-500: oklch(0.6 0 0);
+  --color-leaf-700: oklch(0.4 0 0);
+  --color-leaf-900: oklch(0.23 0 0);
+  --color-leaf-950: oklch(0.16 0 0);
+}
+
+/* Admin typography. The storefront's display face is stagecraft — high
+   contrast, theatrical, right for a shop window and wrong for a working tool.
+   Lora keeps a serif voice but a calmer one: low-contrast and sturdy at small
+   sizes, so headings read as headings without performing. One variable swap,
+   and every `font-display` in the panel picks it up. */
+.admin-type {
+  --font-display: var(--font-lora), Georgia, "Songti SC", "Noto Serif CJK SC", serif;
+}

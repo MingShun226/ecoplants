@@ -88,11 +88,19 @@ export default async function ProductPage({
             alternateName: product.nameBotanical,
             description: tr.description,
             brand: { "@type": "Brand", name: site.name },
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: product.rating,
-              reviewCount: product.reviewCount,
-            },
+            // aggregateRating is omitted entirely when there are no reviews.
+            // Google renders it as stars in search results, so declaring one
+            // without reviews behind it is the most consequential place to
+            // invent a number.
+            ...(product.rating !== null && product.reviewCount > 0
+              ? {
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: product.rating,
+                    reviewCount: product.reviewCount,
+                  },
+                }
+              : {}),
             offers: {
               "@type": "AggregateOffer",
               priceCurrency: "MYR",
@@ -164,28 +172,33 @@ export default async function ProductPage({
               {product.nameBotanical}
             </p>
 
-            <div className="mt-4 flex items-center gap-2 text-sm">
-              <span className="flex" aria-hidden="true">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star
-                    key={i}
-                    className={
-                      i <= Math.round(product.rating)
-                        ? "size-3.5 text-clay-500"
-                        : "size-3.5 text-border-default"
-                    }
-                    fill={i <= Math.round(product.rating) ? "currentColor" : "none"}
-                  />
-                ))}
-              </span>
-              <span className="numeric font-medium">{product.rating.toFixed(1)}</span>
-              <a
-                href="#reviews"
-                className="text-text-tertiary underline-offset-4 transition-colors hover:text-text-primary hover:underline"
-              >
-                {t("reviews", { count: product.reviewCount })}
-              </a>
-            </div>
+            {/* Stars appear only once somebody has actually left one. An
+                unreviewed plant says nothing rather than showing an empty
+                five-star rail, which reads as a bad score. */}
+            {product.rating !== null && product.reviewCount > 0 ? (
+              <div className="mt-4 flex items-center gap-2 text-sm">
+                <span className="flex" aria-hidden="true">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star
+                      key={i}
+                      className={
+                        i <= Math.round(product.rating!)
+                          ? "size-3.5 text-clay-500"
+                          : "size-3.5 text-border-default"
+                      }
+                      fill={i <= Math.round(product.rating!) ? "currentColor" : "none"}
+                    />
+                  ))}
+                </span>
+                <span className="numeric font-medium">{product.rating.toFixed(1)}</span>
+                <a
+                  href="#reviews"
+                  className="text-text-tertiary underline-offset-4 transition-colors hover:text-text-primary hover:underline"
+                >
+                  {t("reviews", { count: product.reviewCount })}
+                </a>
+              </div>
+            ) : null}
 
             <p className="mt-6 leading-relaxed text-text-secondary">{tr.description}</p>
 

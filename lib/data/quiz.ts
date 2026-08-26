@@ -203,7 +203,11 @@ export function scoreQuiz(products: Product[], answers: QuizAnswers): QuizMatch[
       return { product, score, reasons: reasons.slice(0, 3), cautions: cautions.slice(0, 2) };
     });
 
-  return matches.sort((a, b) => b.score - a.score || b.product.rating - a.product.rating);
+  // Rating is only the tie-break, and an unrated plant is not a worse match —
+  // it just has nothing to break the tie with.
+  return matches.sort(
+    (a, b) => b.score - a.score || (b.product.rating ?? -1) - (a.product.rating ?? -1),
+  );
 }
 
 /** Plants the answers rule out, so the shopper learns what to avoid too. */

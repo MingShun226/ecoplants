@@ -47,7 +47,6 @@ export async function updateProductFacts(
   fields: {
     nameBotanical: string;
     categoryId: string | null;
-    peninsularOnly: boolean;
     badges: string[];
   },
 ): Promise<ActionResult> {
@@ -60,7 +59,6 @@ export async function updateProductFacts(
     .update({
       name_botanical: fields.nameBotanical.trim() || null,
       category_id: fields.categoryId,
-      peninsular_only: fields.peninsularOnly,
       badges: fields.badges,
     })
     .eq("id", productId);

@@ -11,7 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { PlantImage } from "@/components/brand/plant-image";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { refreshCart, useCart } from "@/components/features/cart-provider";
@@ -39,21 +39,23 @@ import { cn } from "@/lib/utils";
  * and quantity; this page exists because entering an address and choosing a
  * payment method needs room and undivided attention.
  *
- * Nothing here submits yet. The form is the shape the order will take, and the
- * seam is `onSubmit`: it becomes a server action that re-reads the cart cookie,
- * **recomputes every price from the catalogue**, reserves stock, and hands off
- * to the gateway. The totals rendered below are display-only and are never what
- * gets charged.
+ * Submitting calls `placeOrder`, which re-reads the cart from the cookie
+ * **server-side** and sends nothing but variant ids and quantities. Postgres
+ * recomputes every price, the delivery fee and the coverage rule. The totals
+ * rendered below are display only and are never what gets charged.
  */
 
-/** Peninsular states first — East Malaysia carries a live-plant restriction. */
+/**
+ * Every state this shop delivers to. EcoPlants covers West Malaysia only, so
+ * Sabah, Sarawak and Labuan are not offered at all rather than offered and then
+ * refused. place_order() rejects them at the database as well, so a hand-built
+ * request gets the same answer as the form.
+ */
 const PENINSULAR_STATES = [
   "Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang",
   "Perak", "Perlis", "Pulau Pinang", "Selangor", "Terengganu",
   "Kuala Lumpur", "Putrajaya",
 ] as const;
-
-const EAST_STATES = ["Sabah", "Sarawak", "Labuan"] as const;
 
 type PaymentMethod = "fpx" | "duitnow" | "ewallet" | "card";
 
@@ -91,12 +93,6 @@ export function CheckoutClient({
   const [error, setError] = useState<string | null>(null);
 
   const money = (sen: number) => format.number(toMajor(sen), "currency");
-
-  const isEastMalaysia = EAST_STATES.includes(state as (typeof EAST_STATES)[number]);
-  const blockedLines = useMemo(
-    () => (isEastMalaysia ? lines.filter((line) => line.product.peninsularOnly) : []),
-    [isEastMalaysia, lines],
-  );
 
   const shippingSen =
     subtotalSen >= settings.freeShippingThresholdSen ? 0 : settings.standardShippingSen;
@@ -223,32 +219,15 @@ export function CheckoutClient({
                         {s}
                       </SelectItem>
                     ))}
-                    {EAST_STATES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* The restriction is surfaced the moment the state is chosen, not
-                after payment. A live plant that cannot survive the transit is a
-                refund and a dead plant, in that order. */}
-            {blockedLines.length > 0 ? (
-              <p className="mt-6 rounded-lg border border-warning/40 bg-warning-soft p-5 text-sm leading-relaxed text-text-secondary">
-                <strong className="font-medium text-text-primary">
-                  {t("eastMalaysiaBlockedTitle")}
-                </strong>{" "}
-                {t("eastMalaysiaBlockedBody", {
-                  plants: blockedLines.map((line) => line.product.t[locale].name).join(", "),
-                })}
-              </p>
-            ) : null}
-
+            {/* Coverage is stated plainly rather than enforced after the fact:
+                the state list only contains places we actually deliver to. */}
             <p className="mt-6 text-sm leading-relaxed text-text-secondary">
-              {isEastMalaysia ? ts("eastMalaysia") : ts("peninsular")}
+              {ts("peninsular")}
             </p>
           </Section>
 
@@ -361,7 +340,7 @@ export function CheckoutClient({
                 type="submit"
                 size="lg"
                 className="w-full"
-                disabled={pending || blockedLines.length > 0}
+                disabled={pending}
               >
                 {pending ? t("placingOrder") : t("placeOrder")}
               </Button>

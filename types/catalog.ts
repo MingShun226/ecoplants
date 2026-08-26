@@ -95,7 +95,8 @@ export interface ProductBase {
   attributes: PlantAttributes;
   variants: Variant[];
   images: ProductImage[];
-  rating: number;
+  /** Null until a product has at least one approved review. Never invented. */
+  rating: number | null;
   reviewCount: number;
   /** Live plants that cannot survive 7–8 day transit to Sabah/Sarawak. */
   peninsularOnly: boolean;

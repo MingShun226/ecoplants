@@ -33,7 +33,7 @@ interface ProductRow {
   ref: string;
   name_botanical: string;
   badges: string[] | null;
-  rating: number;
+  rating: number | null;
   review_count: number;
   peninsular_only: boolean;
   categories: { slug: string } | null;
@@ -160,7 +160,9 @@ function mapProduct(row: ProductRow): Product | null {
       .sort((x, y) => x.position - y.position)
       .map(toVariant),
     images: [],
-    rating: Number(row.rating),
+    // Null, not 0. A product nobody has reviewed has no score; zero is the
+    // worst possible one.
+    rating: row.rating === null ? null : Number(row.rating),
     reviewCount: row.review_count,
     peninsularOnly: row.peninsular_only,
     isActive: true,

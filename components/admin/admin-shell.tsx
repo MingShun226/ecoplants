@@ -89,7 +89,7 @@ export function AdminShell({
         adminName={adminName}
         adminUsername={adminUsername}
         adminRole={adminRole}
-        className="hidden w-60 shrink-0 border-r border-border-subtle lg:flex"
+        className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-border-subtle lg:flex"
       />
 
       {/* Mobile drawer */}
@@ -197,7 +197,7 @@ function Rail({
         ) : null}
       </div>
 
-      <nav className="flex-1 p-3">
+      <nav className="flex-1 overflow-y-auto p-3">
         {GROUPS.map((group, i) => (
           <div key={group.label ?? `group-${i}`} className={i > 0 ? "mt-5" : undefined}>
             {group.label ? (

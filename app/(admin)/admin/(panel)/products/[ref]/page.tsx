@@ -134,33 +134,29 @@ export default async function ProductDetailPage({
             <ProductFactsForm product={product} categories={categories} />
           </AdminCard>
 
-          <AdminCard title="Reception">
+          <AdminCard title="At a glance">
             <dl className="flex flex-col gap-4">
-              <AdminField label="Rating">
-                {product.rating === null ? (
-                  <span className="text-text-tertiary">Not rated yet</span>
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <Star className="size-3.5 fill-current" aria-hidden="true" />
-                    <span className="numeric">{product.rating.toFixed(1)}</span>
-                  </span>
-                )}
-              </AdminField>
-              <AdminField label="Reviews">
-                <Link
-                  href="/admin/reviews"
-                  className="numeric underline-offset-4 hover:underline"
-                >
-                  {product.reviewCount}
-                </Link>
-              </AdminField>
-              <AdminField label="Total stock">
+              <AdminField label="In stock">
                 <span className="numeric">{product.onHand}</span>
               </AdminField>
               <AdminField label="Price from">
                 <span className="numeric">
                   {product.priceFromSen === null ? "—" : formatSen(product.priceFromSen)}
                 </span>
+              </AdminField>
+              <AdminField label="Reviews">
+                {/* Ratings come from approved reviews and nothing else. Until
+                    one exists this says so, rather than showing a number that
+                    could only have been invented. */}
+                {product.reviewCount === 0 || product.rating === null ? (
+                  <span className="text-text-tertiary">None yet</span>
+                ) : (
+                  <Link href="/admin/reviews" className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline">
+                    <Star className="size-3.5 fill-current" aria-hidden="true" />
+                    <span className="numeric">{product.rating.toFixed(1)}</span>
+                    <span className="numeric text-text-tertiary">({product.reviewCount})</span>
+                  </Link>
+                )}
               </AdminField>
             </dl>
           </AdminCard>

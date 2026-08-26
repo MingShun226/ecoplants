@@ -23,6 +23,13 @@ import {
 } from "@/lib/admin/enums";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +40,14 @@ import { cn } from "@/lib/utils";
  * translations, prices and attributes would make one typo in a slug throw away
  * an hour of copy-editing in another tab.
  */
+
+/**
+ * Radix's Select reserves the empty string to mean "nothing selected", so an
+ * option that *is* "nothing" needs a value of its own. These never reach the
+ * database — they are mapped back to "" and null at the boundary.
+ */
+const NO_CATEGORY = "__none__";
+const NOT_SET = "__unset__";
 
 /** Shared save-state plumbing, so each form is just its fields. */
 function useSave() {
@@ -137,13 +152,11 @@ export function ProductFactsForm({
   const { pending, error, saved, run } = useSave();
   const [botanical, setBotanical] = useState(product.nameBotanical ?? "");
   const [categoryId, setCategoryId] = useState(product.categoryId ?? "");
-  const [peninsular, setPeninsular] = useState(product.peninsularOnly);
   const [badges, setBadges] = useState<string[]>(product.badges);
 
   const dirty =
     botanical !== (product.nameBotanical ?? "") ||
     categoryId !== (product.categoryId ?? "") ||
-    peninsular !== product.peninsularOnly ||
     badges.join("|") !== product.badges.join("|");
 
   return (
@@ -154,7 +167,6 @@ export function ProductFactsForm({
           updateProductFacts(product.id, {
             nameBotanical: botanical,
             categoryId: categoryId || null,
-            peninsularOnly: peninsular,
             badges,
           }),
         );
@@ -175,21 +187,27 @@ export function ProductFactsForm({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="h-8 rounded-sm border border-border-default bg-surface px-2 text-[13px] outline-none transition-colors focus:border-border-strong"
+          {/* The project's own Select, not a native one. A bare <select> is
+              painted by the operating system, so it ignores every token in the
+              design system and looks like a different application. */}
+          <Select
+            value={categoryId || NO_CATEGORY}
+            onValueChange={(v) => setCategoryId(v === NO_CATEGORY ? "" : v)}
           >
-            <option value="">No category</option>
-            {categories
-              .filter((c) => !c.isDerived)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </select>
+            <SelectTrigger id="category" className="h-8 rounded-sm text-[13px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_CATEGORY}>No category</SelectItem>
+              {categories
+                .filter((c) => !c.isDerived)
+                .map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -221,22 +239,6 @@ export function ProductFactsForm({
           translation renders as the raw key on the storefront.
         </p>
       </div>
-
-      <label className="flex cursor-pointer items-start gap-2.5">
-        <input
-          type="checkbox"
-          checked={peninsular}
-          onChange={(e) => setPeninsular(e.target.checked)}
-          className="mt-0.5 size-4 shrink-0 accent-ink-950"
-        />
-        <span>
-          <span className="block text-[13px]">Peninsular Malaysia only</span>
-          <span className="block text-[11px] leading-relaxed text-text-tertiary">
-            Tick for anything that will not survive 7–8 days in transit to Sabah or
-            Sarawak. Checkout blocks East Malaysian addresses for these.
-          </span>
-        </span>
-      </label>
 
       <SaveRow pending={pending} saved={saved} error={error} dirty={dirty} />
     </form>
@@ -595,19 +597,22 @@ function Choice({
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={`choice-${label}`}>{label}</Label>
-      <select
-        id={`choice-${label}`}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
-        className="h-8 rounded-sm border border-border-default bg-surface px-2 text-[13px] outline-none transition-colors focus:border-border-strong"
+      <Select
+        value={value ?? NOT_SET}
+        onValueChange={(v) => onChange(v === NOT_SET ? null : v)}
       >
-        <option value="">Not set</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id={`choice-${label}`} className="h-8 rounded-sm text-[13px] capitalize">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NOT_SET}>Not set</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o} value={o} className="capitalize">
+              {o.replace(/-/g, " ")}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

@@ -186,7 +186,13 @@ export function sortProducts(items: Product[], sort: SortKey): Product[] {
     case "price-desc":
       return copy.sort((a, b) => from(b) - from(a));
     case "rating":
-      return copy.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+      // An unrated plant sorts last rather than as a zero — it has not scored
+      // badly, nobody has scored it. With no reviews anywhere this sort falls
+      // through to the review count and leaves the order untouched, which is
+      // the honest outcome.
+      return copy.sort(
+        (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || b.reviewCount - a.reviewCount,
+      );
     default:
       return copy.sort((a, b) => b.reviewCount - a.reviewCount);
   }

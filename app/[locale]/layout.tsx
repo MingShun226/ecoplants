@@ -6,6 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { LOCALE_HREFLANG, routing } from "@/i18n/routing";
 import { getSettings } from "@/lib/data/settings";
+import { isIndexable, siteUrl } from "@/lib/site-url";
 import { AppProviders } from "./providers";
 import "../globals.css";
 
@@ -56,7 +57,7 @@ export async function generateMetadata({
   );
 
   return {
-    metadataBase: new URL("https://ecoplants.my"),
+    metadataBase: siteUrl(),
     title: {
       default: t("homeTitle"),
       template: t("titleTemplate", { page: "%s" }),
@@ -69,7 +70,9 @@ export async function generateMetadata({
       type: "website",
       locale: LOCALE_HREFLANG[locale],
     },
-    robots: { index: true, follow: true },
+    // Preview deployments are public URLs. Indexing them competes with the
+    // live site for the same content, so only production says yes.
+    robots: { index: isIndexable(), follow: isIndexable() },
   };
 }
 

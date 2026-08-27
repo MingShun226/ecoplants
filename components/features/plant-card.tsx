@@ -1,7 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { PlantImage } from "@/components/brand/plant-image";
-import { CareLine, PetSafetyBadge } from "@/components/features/care";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { toMajor } from "@/lib/utils/format";
@@ -12,10 +11,17 @@ import { fromPriceSen, inStock, totalStock, type Product } from "@/types/catalog
  * One card across every grid context, sized by its slot via container queries.
  *
  * The design is a frameless portrait plate: the plant sits on a sunken warm
- * ground with no border to fight the photography, lifts on a soft shadow when
- * hovered, and an arrow chip rises from the corner (the whole card is the link;
- * the chip just says so). Type below stays in the site's ledger voice — quiet
- * small-caps fact line, serif name, price as the anchor.
+ * ground with no border to fight the photography, lifts and shadows as one
+ * object when hovered, and an arrow chip rises from the corner (the whole card
+ * is the link; the chip just says so).
+ *
+ * Nothing overlays the plant and nothing summarises its care. Both were tried
+ * and both cost more than they returned: four small labels competing over the
+ * photograph, and a line of care shorthand answering a question nobody asks
+ * while scanning a grid. Light, water, pet safety and difficulty are all
+ * filters on the listing and prose on the product page, which is where someone
+ * is actually deciding. What is left is what sells a plant — the plant, its
+ * name, and the price.
  */
 export function PlantCard({
   product,
@@ -28,7 +34,6 @@ export function PlantCard({
 }) {
   const locale = useLocale() as Locale;
   const t = useTranslations("product");
-  const tb = useTranslations("badges");
   const ta = useTranslations("actions");
   const format = useFormatter();
   const tr = product.t[locale];
@@ -45,11 +50,17 @@ export function PlantCard({
         className="block focus-visible:outline-none"
         aria-label={tr.name}
       >
+        {/* With the labels gone the frame is the card, so it gets the softer
+            radius and lifts as one object rather than only casting a shadow.
+            `will-change` is deliberate: transform and shadow together on a grid
+            of these is enough to drop frames on a mid-range phone otherwise. */}
         <div
           className={cn(
-            "relative overflow-hidden rounded-xl bg-surface-sunken",
-            "transition-shadow duration-500 ease-refined",
+            "relative overflow-hidden rounded-2xl bg-surface-sunken",
+            "transition-[transform,box-shadow] duration-500 ease-refined [will-change:transform]",
+            "group-hover:-translate-y-1",
             "group-hover:shadow-[0_28px_56px_-28px_oklch(0.28_0.02_55/0.30)]",
+            "motion-reduce:transition-none motion-reduce:group-hover:translate-y-0",
           )}
         >
           <div className="relative aspect-4/5 w-full overflow-hidden">
@@ -64,42 +75,15 @@ export function PlantCard({
             />
           </div>
 
-          {/* One pill, bottom-left, never two. Badges pinned to opposite top
-              corners overlapped as soon as the card was narrower than the sum
-              of their labels — every two-up grid on a phone. Wrapping them was
-              a patch; carrying a single label is the fix, and it reads at a
-              glance the way a shelf tag does.
+          {/* Nothing is printed over the plant.
 
-              The order is a priority, not a preference: sold out overrides
-              everything because it changes whether you can buy at all, then
-              new, which is the reason to look now and the one label that stops
-              being true on its own, then the plant's own badge. Pet safety is
-              not in this stack — it is a fact about the plant rather than a
-              status, and it sits with the care line below. */}
-          {soldOut ? (
-            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
-              {ta("soldOut")}
-            </span>
-          ) : product.isNew ? (
-            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
-              {tb("newArrival")}
-            </span>
-          ) : product.badges[0] ? (
-            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
-              {tb(product.badges[0])}
-            </span>
-          ) : null}
-
-          {/* Top-right, diagonally opposite the status pill. The two used to
-              share the top edge and collided on any narrow card; separating
-              them by corner means they cannot meet at any width, which beats
-              wrapping them and beats moving this one below the image, where it
-              pushed the name and price out of line with the cards beside it. */}
-          {product.attributes.petSafe === true ? (
-            <span className="pointer-events-none absolute right-3.5 top-3.5">
-              <PetSafetyBadge petSafe className="bg-canvas/90 backdrop-blur-sm" />
-            </span>
-          ) : null}
+              Every label that used to sit here — the attribute badge, pet
+              safety, new — is a fact you can already filter by, and none of
+              them was the reason anyone stopped on a card. They were four
+              small competing rectangles on top of the one thing that actually
+              sells a plant. Sold out is the single exception, and it moved to
+              the price line below, where an unbuyable plant says so in the
+              slot you look at to decide. */}
 
           {/* Rising arrow chip — the whole card is already the link. */}
           <span
@@ -110,24 +94,33 @@ export function PlantCard({
           </span>
         </div>
 
-        <div className="mt-4 flex flex-col gap-1.5 px-0.5">
-          <CareLine attributes={product.attributes} />
-
-          <h3 className="font-display text-[17px] font-normal leading-snug transition-colors duration-300 group-hover:text-clay-800 @[15rem]:text-lg">
+        {/* Three lines, in the order you read them: what it is, what it is
+            called, what it costs. The care summary that used to head this block
+            was answering a question nobody asks while browsing — it belongs on
+            the product page, where there is room to say it properly, and in the
+            filters, where it is actually actionable. */}
+        <div className="mt-5 flex flex-col gap-1 px-0.5">
+          <h3 className="font-display text-lg font-normal leading-snug transition-colors duration-300 group-hover:text-clay-800 @[15rem]:text-xl">
             {tr.name}
           </h3>
 
-          <p className="font-display text-xs italic text-text-tertiary">
+          <p className="font-display text-[12.5px] italic leading-snug text-text-tertiary">
             {product.nameBotanical}
           </p>
 
-          <div className="mt-1 flex items-baseline justify-between gap-3">
-            <p className="numeric text-[15px] font-medium">
-              {multipleSizes ? (
-                <span className="text-xs font-normal text-text-tertiary">{t("from")} </span>
-              ) : null}
-              {format.number(toMajor(fromPriceSen(product)), "currency")}
-            </p>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {soldOut ? (
+              <p className="text-[13px] uppercase tracking-[0.14em] text-text-tertiary">
+                {ta("soldOut")}
+              </p>
+            ) : (
+              <p className="numeric text-[15px] font-medium">
+                {multipleSizes ? (
+                  <span className="text-xs font-normal text-text-tertiary">{t("from")} </span>
+                ) : null}
+                {format.number(toMajor(fromPriceSen(product)), "currency")}
+              </p>
+            )}
             {lowStock ? (
               <span className="flex items-center gap-1.5 text-[11px] text-warning">
                 <span aria-hidden="true" className="size-1.5 rounded-full bg-warning" />

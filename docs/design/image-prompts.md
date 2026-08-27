@@ -1,87 +1,103 @@
 # Image prompts
 
 Prompts for generating the site's imagery. Written against the slots that
-actually exist in the code, so the output drops straight in.
+actually exist in the code, and against the reference photographs in
+`public/images/plants/`.
+
+## Start here: use your own photos as references
+
+The ten photographs in `public/images/plants/` are the most valuable asset in
+this document. They are real: a working Malaysian nursery in hard midday sun —
+terracotta and black poly pots on wire benches, concrete and gravel underfoot,
+shade netting overhead, a hand holding a pot into frame.
+
+Your generation tool takes up to sixteen images in `input_urls`. **Upload all
+ten and attach them to every single generation.** That is what makes the output
+look like your nursery instead of like a generic stock library. Nothing in the
+text below matters as much as this does.
 
 ## What the site asks for
 
 | Slot | Where | Ratio | Count | Status |
 | --- | --- | --- | --- | --- |
-| `catalog` | Plant cards, cart drawer, quiz results, PDP | **4:5** portrait | 14 (one per plant) | empty |
+| `catalog` | Plant cards, cart drawer, quiz results, PDP | **4:5** portrait | one per plant | empty |
 | `lifestyle` | PDP gallery | 4:5 | 1–2 per plant | empty |
 | `detail` | PDP gallery | 4:5 | 1 per plant | empty |
 | `scale` | PDP gallery | 4:5 | 1 per plant | empty |
-| Category image | Admin only — **not rendered on the storefront yet** | 4:3 | 7 | empty |
-| Open Graph card | WhatsApp / Facebook / X link previews | 1.91:1 (1200×630) | 1 | **route does not exist** |
+| Category cover | Home page tiles | 4:3 | 7 | empty, now renders |
+| Open Graph card | WhatsApp / Facebook link previews | 1.91:1 (1200×630) | 1 | **route does not exist** |
 
-Two gaps worth knowing before you spend time generating:
+Two constraints from the generation tool and the storage bucket:
 
-- **Category images upload but display nowhere.** `categories.image_path` is
-  written by the admin and read back by the admin. The storefront's category
-  list is a hardcoded array in `lib/data/queries.ts` with no image field, so
-  nothing renders. Wiring it is a small change — worth doing before generating
-  seven images.
-- **There is no OG image.** `app/[locale]/layout.tsx` sets `openGraph.title`
-  and `description` but no `images`, so a shared link shows a bare text card.
-  This is the single highest-value image on the list: every WhatsApp share of
-  the shop currently looks unfinished.
-
-Everything renders through `object-cover`, so anything off-ratio is cropped
-from the centre. Generate at the stated ratio.
+- **4:5 is unavailable at 2K and 4K.** Generate product shots at **3:4 · 2K**
+  and let the site crop — everything renders through `object-cover`, which
+  trims from the centre.
+- **The bucket caps at 5 MB** and accepts jpeg, png, webp and avif. A 4K PNG
+  lands at 12–20 MB and is rejected. Convert to WebP at quality 85 first.
 
 ## House style
 
-Paste this into every prompt. It is the site's palette and light, so images
-made with it sit on the page instead of on top of it.
+Paste this into every prompt, alongside the reference images.
 
-> Warm natural daylight, soft and directional, as if from a large window on an
-> overcast tropical morning. Muted earthy palette: cream `#F7F3EC`, warm sand
-> `#F0E6D8`, terracotta `#CF785C`, sage `#A2B78D`, deep green `#556746`.
-> Matte surfaces, no gloss, no plastic sheen. Shallow depth of field. Calm,
-> editorial, unhurried. No text, no logos, no watermarks, no faces.
-> Photographic, not illustrated. Shot on a 50mm lens at f/2.8.
+> Bright natural daylight, the high clean light of a tropical morning. Fresh
+> saturated greens against warm neutrals: cream `#F7F3EC`, warm sand `#F0E6D8`,
+> terracotta `#CF785C`, pale concrete grey. Light and open throughout — pale
+> grounds, soft open shadows, nothing sunk in deep shade. Real plants in real
+> terracotta and black nursery pots, not styled props. Honest, unhurried,
+> airy. No text, no logos, no watermarks, no faces. Photographic, not
+> illustrated. 50mm at f/4, front to back sharp.
 
-Negative prompt, for tools that take one:
+Negative prompt, if your tool takes one:
 
-> harsh flash, blue or fluorescent cast, oversaturated greens, HDR, glossy
-> plastic pots, cluttered background, text, watermark, logo, hands, deformed
-> leaves, extra stems, cartoon, 3D render, illustration
+> dark, moody, low-key, heavy shadows, night, dusk, black background, muddy
+> greens, blue or fluorescent cast, HDR, glossy plastic pots, text, watermark,
+> logo, deformed leaves, cartoon, 3D render, illustration
+
+Two things in there are corrections rather than preferences. **`f/4`, not
+f/2.8** — your reference photos are deep-focus, everything crisp from the front
+pot to the back bench, and that busy honesty is what makes them read as a real
+nursery. And **the whole negative prompt exists to hold the light up**: models
+drift toward moody product lighting unless told not to, and this shop is not a
+moody shop.
 
 ## The four shot kinds
 
 **`catalog`** — the workhorse. It is what the card shows, so it has to read at
 120px wide.
 
-> [PLANT] in a matte terracotta pot, centred, full plant visible from soil line
-> to top leaf, straight-on eye-level view, plain seamless cream `#F7F3EC`
-> background, soft shadow pooling at the base. Product photography, 4:5
-> portrait. [HOUSE STYLE]
+> [PLANT] in a terracotta pot, centred, full plant visible from soil line to
+> top leaf, straight-on at the plant's own height, plain seamless cream
+> `#F7F3EC` background, soft open shadow at the base. Bright, evenly lit,
+> nothing in shadow. Product photography, 3:4 portrait. [HOUSE STYLE]
 
-**`lifestyle`** — the plant in a Malaysian home. This is where the shop stops
-looking like a catalogue.
+**`lifestyle`** — where the plant lives. Your references are all nursery, which
+is the more honest setting for outdoor stock; use a home only for the indoor
+plants.
 
-> [PLANT] in a matte terracotta pot on a rattan stool beside a window with
-> white sheer curtains, in a bright Kuala Lumpur apartment. Louvred window,
-> terrazzo floor, a rattan basket, a stack of books. Late morning light.
-> Lived-in, not styled. 4:5 portrait. [HOUSE STYLE]
+> [PLANT] in a terracotta pot on a galvanised wire nursery bench, other potted
+> stock receding behind it, concrete floor, bright dappled light through shade
+> netting. A working nursery, unstyled and slightly untidy. 3:4 portrait.
+> [HOUSE STYLE]
 
-Swap the setting per plant — a balcony with a laundry rack and a monsoon sky
-for outdoor plants, a bathroom shelf for ferns, a kitchen counter for the
-small ones. Repeating one room across fourteen plants reads as a template.
+For indoor plants instead:
+
+> [PLANT] in a terracotta pot beside a bright window in a Malaysian apartment,
+> white sheer curtain, terrazzo floor, mid-morning sun falling across the wall.
+> Bright and airy, lived-in rather than styled. 3:4 portrait. [HOUSE STYLE]
 
 **`detail`** — macro. Sells the thing photographs usually flatten.
 
-> Extreme close-up of [LEAF FEATURE], filling the frame, backlit so the veins
-> glow through, water droplets on the surface, background falling to soft
-> blur. Macro photography, 4:5 portrait. [HOUSE STYLE]
+> Extreme close-up of [LEAF FEATURE], filling the frame, bright daylight from
+> above and behind so the leaf glows, background falling to soft green blur.
+> Macro photography, 3:4 portrait. [HOUSE STYLE]
 
 **`scale`** — answers "how big is it, really", which is the question the size
 picker raises and words never quite settle.
 
-> [PLANT] in a matte terracotta pot standing on a pale wooden floor beside a
-> plain wooden dining chair for scale, the plant reaching [HEIGHT]. Full room
-> corner visible, cream wall. Straight-on, no perspective distortion. 4:5
-> portrait. [HOUSE STYLE]
+> [PLANT] in a terracotta pot on a pale concrete floor beside a plain wooden
+> chair for scale, the plant reaching [HEIGHT]. Bright open daylight, cream
+> wall behind. Straight-on, no perspective distortion. 3:4 portrait.
+> [HOUSE STYLE]
 
 Real dimensions from the variant table, so the scale shot is honest:
 
@@ -101,7 +117,7 @@ Drop the middle column into `[PLANT]` and the right into `[LEAF FEATURE]`.
 | --- | --- | --- |
 | Aglaonema Red | a compact Aglaonema commutatum, broad lance-shaped leaves in deep green with pink-red central veins and rose speckling | the pink-red midrib bleeding into deep green, speckled margins |
 | Bird's Nest Fern | an Asplenium nidus, a rosette of undivided apple-green fronds with rippled edges radiating from a dark furry centre | the rippled frond edge and the near-black central midrib |
-| Boston Fern | a Nephrolepis exaltata in a hanging pot, dense arching finely-divided fronds cascading well below the rim | overlapping pinnae along an arching frond, translucent in backlight |
+| Boston Fern | a Nephrolepis exaltata in a hanging pot, dense arching finely-divided fronds cascading well below the rim | overlapping pinnae along an arching frond, translucent in daylight |
 | Bougainvillea | a woody Bougainvillea glabra with thorny stems and dense magenta papery bracts | papery magenta bracts around tiny white tubular flowers |
 | Calathea Orbifolia | a Goeppertia orbifolia, large round leaves banded in silver-green and deep green, held on upright stems | the silver-and-green banding running to a rounded leaf edge |
 | Fiddle Leaf Fig | a Ficus lyrata on a single upright trunk, large leathery violin-shaped leaves with deep sunken veins | sunken veins in a thick violin-shaped leaf, matte and slightly puckered |
@@ -114,45 +130,68 @@ Drop the middle column into `[PLANT]` and the right into `[LEAF FEATURE]`.
 | Spider Plant | a Chlorophytum comosum in a hanging pot, arching cream-striped leaves with plantlets dangling on thin runners | a cream centre stripe running the length of an arching leaf |
 | ZZ Plant | a Zamioculcas zamiifolia, upright stems of glossy dark-green waxy oval leaflets | waxy dark leaflets paired along a thick stem, near-mirror shine |
 
-## Category images (4:3)
+> **These fourteen are the plants in the database, and they are not the plants
+> in your reference photos.** The catalogue is indoor aroids — Monstera, ZZ,
+> Calathea, Fiddle Leaf. Your photographs are outdoor nursery stock: purple
+> flowering shrubs trained as bonsai, juniper and conifer seedlings, hedging.
+> If the photos are the real business, the catalogue needs replacing before any
+> of this is worth generating. Worth settling first — see the note at the end.
+
+## Category covers (4:3)
 
 | Slug | Prompt |
 | --- | --- |
-| `new` | A small cluster of freshly potted young plants in nursery-grade terracotta on a concrete potting bench, soil still dark and damp, a watering can just out of frame. [HOUSE STYLE] |
-| `outdoor` | A Malaysian apartment balcony in late afternoon: bougainvillea and frangipani in large terracotta pots against a railing, laundry line, monsoon clouds building over rooftops. [HOUSE STYLE] |
-| `indoor` | A corner of a bright KL apartment with three plants of different heights beside a louvred window, sheer curtain moving, terrazzo floor. [HOUSE STYLE] |
-| `pet-safe` | A ginger cat asleep on a rattan mat beside a Bird's Nest Fern and a Parlour Palm in terracotta pots, warm floor light. [HOUSE STYLE] |
-| `beginner` | A single Snake Plant in a terracotta pot on a plain side table against a cream wall, nothing else in frame, generous empty space. [HOUSE STYLE] |
-| `pots` | An overhead flat-lay of empty pots on cream linen: matte terracotta, cream glazed ceramic, grey fibreclay, in graduating sizes, arranged loosely. [HOUSE STYLE] |
-| `care` | An overhead flat-lay on cream linen: a mound of chunky aroid mix, a small brass trowel, a bag of slow-release fertiliser pellets, pruning snips, a moisture meter. [HOUSE STYLE] |
+| `new` | Freshly potted young plants in nursery terracotta on a concrete potting bench, soil still dark and damp, bright morning light, a watering can just out of frame. |
+| `outdoor` | A Malaysian nursery yard in full sun: flowering shrubs and small trees in terracotta pots along a gravel path, blue sky above, everything bright and green. |
+| `indoor` | A corner of a bright airy KL apartment, three plants of different heights beside a big window, white sheer curtain lifting, terrazzo floor, sunlight across the wall. |
+| `pet-safe` | A ginger cat asleep on a rattan mat beside a Bird's Nest Fern and a Parlour Palm in terracotta pots, bright daylight across a pale floor. |
+| `beginner` | A single Snake Plant in a terracotta pot on a plain side table against a cream wall, bright even light, generous empty space. |
+| `pots` | Overhead flat-lay of empty pots on cream linen in bright daylight: terracotta, cream glazed ceramic, grey fibreclay, graduating sizes. |
+| `care` | Overhead flat-lay on cream linen in bright daylight: a mound of chunky aroid mix, a brass trowel, slow-release fertiliser pellets, pruning snips, a moisture meter. |
 
 ## Open Graph card (1200×630)
 
-The one to generate first.
+The highest-value single image on the list: without it, every WhatsApp share of
+the shop renders as a bare line of text.
 
-> A wide shot of a Monstera Deliciosa and a Snake Plant in matte terracotta
-> pots against a deep green wall `#132014`, lit from the left, with generous
-> empty space on the right two-thirds of the frame for text to be overlaid.
-> Cinematic, calm, editorial. 1.91:1 landscape. [HOUSE STYLE]
+> A bright Malaysian nursery bench in morning sun, a row of healthy potted
+> plants in terracotta pots along the left third of the frame, receding into
+> soft green blur. The right two-thirds is open pale background — sunlit
+> concrete and cream wall — clear and unbroken for text. Airy, fresh, 1.91:1
+> landscape. [HOUSE STYLE]
 
-Leave the right side empty — the wordmark and tagline get composited over it.
-Then add `images` to `openGraph` in `app/[locale]/layout.tsx`, or add an
+Leave the right side clear; the wordmark is composited over it. Then add
+`images` to `openGraph` in `app/[locale]/layout.tsx`, or an
 `app/opengraph-image.tsx` route.
 
 ## One caution on `catalog` shots
 
 A generated `catalog` image is a picture of a plant that does not exist. It is
-the image the customer decides on, and the plant that arrives will not match
-it — different leaf count, different form, different pot. That is a refund
+the image the customer decides on, and the plant that arrives will not match it
+— different leaf count, different form, different pot. That is a refund
 conversation every time, and under the Consumer Protection Act 1999 a product
-image that misrepresents what ships is a misleading representation, not a
-stylistic choice.
+image that misrepresents what ships is a misleading representation rather than
+a styling choice.
 
-So: **shoot `catalog` from real stock.** A phone camera, a window and a sheet
-of cream card gets closer to this house style than any prompt, because it is
-photographing the actual plant.
+**Shoot `catalog` from real stock.** You already have ten photographs proving
+you can: a phone, the morning light you already work in, and a sheet of cream
+card behind the pot gets you closer to this house style than any prompt,
+because it is photographing the actual plant.
 
-Generate the rest freely — `lifestyle` sets a mood rather than promising a
-specific plant, `detail` shows a species trait true of every specimen, and
-category headers and the OG card illustrate a collection. Those are honest.
-`scale` sits in between: fine as long as the height matches the table above.
+Generate the rest freely — `lifestyle` sets a scene, `detail` shows a species
+trait true of every specimen, category covers and the OG card illustrate a
+collection. Those are honest.
+
+## The open question
+
+The reference photographs and the database disagree about what this shop sells.
+
+The catalogue is fourteen trendy indoor aroids. The photographs are an outdoor
+ornamental nursery — flowering shrubs, conifers, trained bonsai, hedging stock,
+sold in terracotta from wire benches. Those are different businesses with
+different customers, different price points and different care copy.
+
+Nothing below the catalogue level is affected — the admin, orders, delivery and
+checkout do not care what the plants are. But the fourteen products, their
+descriptions, their care data and every image slot in this document follow from
+that answer. It is worth settling before generating fifty images against it.

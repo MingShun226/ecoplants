@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 import { PlantQuiz } from "@/components/features/plant-quiz";
 import { getProducts } from "@/lib/data/queries";
 
@@ -25,7 +26,13 @@ export default async function QuizPage({
   return (
     <div className="section-y">
       <div className="container-page">
-        <PlantQuiz products={await getProducts()} />
+        {/* PlantQuiz reads the hero's answer off the query string, and
+            useSearchParams suspends during prerender. Without this boundary the
+            page cannot be built statically and falls back to rendering on every
+            request — for a query param that is optional and usually absent. */}
+        <Suspense fallback={<div className="min-h-[60vh]" />}>
+          <PlantQuiz products={await getProducts()} />
+        </Suspense>
       </div>
     </div>
   );

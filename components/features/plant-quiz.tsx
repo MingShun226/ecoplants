@@ -2,7 +2,8 @@
 
 import { ArrowRight, PawPrint } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { PlantImage } from "@/components/brand/plant-image";
 import { RuledEyebrow } from "@/components/brand/primitives";
@@ -19,8 +20,29 @@ import { fromPriceSen, type Product } from "@/types/catalog";
 export function PlantQuiz({ products }: { products: Product[] }) {
   const t = useTranslations("quiz");
   const ta = useTranslations("actions");
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<QuizAnswers>({});
+  const searchParams = useSearchParams();
+
+  /**
+   * The hero asks question one, so arriving with it answered is normal. Read
+   * off the URL rather than through a prop, because the quiz page is
+   * prerendered — a page that reads `searchParams` on the server is rendered
+   * on demand for every visit, and this one has nothing else that needs it.
+   *
+   * The value is validated against the question's own options: a hand-typed
+   * `?light=banana` should start the quiz at the beginning, not seed an answer
+   * that scoring will never match.
+   */
+  const seeded = useMemo(() => {
+    const question = quizQuestions[0];
+    const value = searchParams.get(question.id);
+    return value && question.options.some((o) => o.value === value)
+      ? ({ [question.id]: value } as QuizAnswers)
+      : null;
+  }, [searchParams]);
+
+  // Read once, at mount. Later URL changes are this component's own doing.
+  const [step, setStep] = useState(seeded ? 1 : 0);
+  const [answers, setAnswers] = useState<QuizAnswers>(seeded ?? {});
 
   const done = step >= quizQuestions.length;
   const question = quizQuestions[step];

@@ -36,15 +36,9 @@ function useScrolledPast(threshold: number, enabled: boolean): boolean {
 /**
  * Scroll-aware header chrome.
  *
- * The landing page opens on a full-bleed hero, so the header sits transparent
- * over it and resolves to the solid cream bar once the hero scrolls away. Every
- * other route starts solid.
- *
- * It used to invert to light-on-dark over that first screen, because the hero
- * was a dark interior. The hero is a sunlit nursery now, so the type stays dark
- * throughout and only the background and border change — which is the quieter
- * transition anyway: nothing about the header needs to re-render its colours
- * mid-scroll except the surface it sits on.
+ * The landing page opens on a dark hero, so the header sits transparent over it
+ * in light-on-dark, then resolves to the solid cream bar once the hero scrolls
+ * away. Every other route starts solid.
  *
  * The transition is on colour only — the header never changes height or
  * position, because a header that resizes on scroll makes the whole page feel
@@ -60,11 +54,11 @@ export function HeaderShell({
   const pathname = usePathname();
   const isImmersive = pathname === "/";
   const scrolled = useScrolledPast(64, isImmersive);
-  const overHero = isImmersive && !scrolled;
+  const overDark = isImmersive && !scrolled;
 
   return (
     <header
-      data-over-hero={overHero ? "" : undefined}
+      data-over-dark={overDark ? "" : undefined}
       // Radix scroll-lock (selects, sheets) hides the page scrollbar and pads
       // <body> to compensate — but a fixed element sits outside <body>'s
       // padding, so without the same gap its centred content slides right while
@@ -73,18 +67,17 @@ export function HeaderShell({
       style={{ paddingRight: "var(--removed-body-scroll-bar-size, 0px)" }}
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,color] duration-500 ease-refined",
-        "text-text-primary",
-        overHero
-          ? "border-b border-transparent bg-transparent"
-          : "border-b border-border-subtle bg-canvas/85 backdrop-blur-md",
+        overDark
+          ? "on-dark-tokens border-b border-transparent bg-transparent text-ink-50"
+          : "border-b border-border-subtle bg-canvas/85 text-text-primary backdrop-blur-md",
       )}
     >
       {/* The guarantee strip is the site's central claim, so it stays visible
-          in both states — only its rule weight changes. */}
+          in both states — it just inverts. */}
       <div
         className={cn(
           "hidden transition-colors duration-500 md:block",
-          overHero ? "border-b border-border-subtle/50" : "border-b border-border-subtle/70",
+          overDark ? "border-b border-ink-50/12" : "border-b border-border-subtle/70",
         )}
       >
         {strip}

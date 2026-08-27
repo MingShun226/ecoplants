@@ -22,7 +22,8 @@
     "account": "Account",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "newArrivals": "New arrivals"
   },
   "actions": {
     "seeAll": "See all",
@@ -505,6 +506,10 @@
     "statLanguages": "Languages",
     "ordersEmptyQuiz": "Help me choose",
     "welcome": "Welcome, {name}. Your account is ready.",
-    "welcomeBack": "Welcome back, {name}."
+    "welcomeBack": "Welcome back, {name}.",
+    "memberSince": "Member since {date}",
+    "ordersOpen": "{count, plural, one {# on the way} other {# on the way}}",
+    "ordersAllDone": "All delivered",
+    "phoneLocked": "Your number is your sign-in, so it cannot be changed here. Message us on WhatsApp if it moves."
   }
 }

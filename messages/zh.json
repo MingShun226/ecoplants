@@ -22,7 +22,8 @@
     "account": "账户",
     "openMenu": "打开菜单",
     "closeMenu": "关闭菜单",
-    "skipToContent": "跳至正文"
+    "skipToContent": "跳至正文",
+    "newArrivals": "新到货"
   },
   "actions": {
     "seeAll": "查看全部",
@@ -505,6 +506,10 @@
     "statLanguages": "种语言",
     "ordersEmptyQuiz": "帮我挑选",
     "welcome": "欢迎，{name}。您的账户已就绪。",
-    "welcomeBack": "欢迎回来，{name}。"
+    "welcomeBack": "欢迎回来，{name}。",
+    "memberSince": "自 {date} 起成为会员",
+    "ordersOpen": "{count, plural, other {# 件在途}}",
+    "ordersAllDone": "全部已送达",
+    "phoneLocked": "手机号即是您的登录方式，无法在此更改。如需更换，请通过 WhatsApp 联系我们。"
   }
 }

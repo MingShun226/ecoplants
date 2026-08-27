@@ -22,7 +22,8 @@
     "account": "Akaun",
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
-    "skipToContent": "Terus ke kandungan"
+    "skipToContent": "Terus ke kandungan",
+    "newArrivals": "Ketibaan baharu"
   },
   "actions": {
     "seeAll": "Lihat semua",
@@ -505,6 +506,10 @@
     "statLanguages": "Bahasa",
     "ordersEmptyQuiz": "Bantu saya pilih",
     "welcome": "Selamat datang, {name}. Akaun anda sudah sedia.",
-    "welcomeBack": "Selamat kembali, {name}."
+    "welcomeBack": "Selamat kembali, {name}.",
+    "memberSince": "Ahli sejak {date}",
+    "ordersOpen": "{count, plural, other {# dalam perjalanan}}",
+    "ordersAllDone": "Semua telah dihantar",
+    "phoneLocked": "Nombor anda ialah log masuk anda, jadi ia tidak boleh ditukar di sini. Hubungi kami di WhatsApp jika ia bertukar."
   }
 }

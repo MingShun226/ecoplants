@@ -20,6 +20,8 @@ export interface CustomerSession {
   id: string;
   phone: string;
   fullName: string | null;
+  /** When the account was opened — the account page shows it as "member since". */
+  createdAt: string;
 }
 
 async function fetchCustomer(): Promise<CustomerSession | null> {
@@ -32,15 +34,21 @@ async function fetchCustomer(): Promise<CustomerSession | null> {
 
   const { data } = await supabase
     .from("customers")
-    .select("id, full_name, phone")
+    .select("id, full_name, phone, created_at")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!data) return null;
 
-  const row = data as { id: string; full_name: string | null; phone: string | null };
+  const row = data as {
+    id: string;
+    full_name: string | null;
+    phone: string | null;
+    created_at: string;
+  };
   return {
     id: row.id,
+    createdAt: row.created_at,
     // customers.phone carries the +; auth.users.phone does not.
     phone: row.phone ?? (user.phone ? `+${user.phone}` : ""),
     fullName: row.full_name,

@@ -165,11 +165,26 @@ export async function updateAttributes(
 
 export async function updateVariant(
   variantId: string,
-  fields: { priceSen: number; compareAtSen: number | null },
+  fields: {
+    sku: string;
+    sizeKey: string;
+    priceSen: number;
+    compareAtSen: number | null;
+    weightGrams: number | null;
+    heightCm: number | null;
+    potDiameterCm: number | null;
+  },
 ): Promise<ActionResult> {
   const denied = await guard();
   if (denied) return denied;
 
+  const sku = fields.sku.trim().toUpperCase();
+  if (!/^[A-Z0-9-]{3,32}$/.test(sku)) {
+    return { ok: false, error: "SKU should be 3–32 characters: letters, digits and hyphens." };
+  }
+  if (!fields.sizeKey.trim()) {
+    return { ok: false, error: "A size is required — it is what the customer picks between." };
+  }
   if (!Number.isInteger(fields.priceSen) || fields.priceSen < 0) {
     return { ok: false, error: "Price must be a whole number of sen, zero or more." };
   }
@@ -177,13 +192,38 @@ export async function updateVariant(
     return { ok: false, error: "A “was” price has to be higher than the price being charged." };
   }
 
+  // Dimensions drive courier quotes and the "how big is it really" panel, so a
+  // negative one is a data-entry slip rather than a meaningful value.
+  for (const [label, value] of [
+    ["Weight", fields.weightGrams],
+    ["Height", fields.heightCm],
+    ["Pot diameter", fields.potDiameterCm],
+  ] as const) {
+    if (value !== null && (!Number.isFinite(value) || value < 0)) {
+      return { ok: false, error: `${label} cannot be negative.` };
+    }
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("product_variants")
-    .update({ price_sen: fields.priceSen, compare_at_sen: fields.compareAtSen })
+    .update({
+      sku,
+      size_key: fields.sizeKey.trim(),
+      price_sen: fields.priceSen,
+      compare_at_sen: fields.compareAtSen,
+      weight_grams: fields.weightGrams,
+      height_cm: fields.heightCm,
+      pot_diameter_cm: fields.potDiameterCm,
+    })
     .eq("id", variantId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: `Another variant already uses the SKU ${sku}.` };
+    }
+    return { ok: false, error: error.message };
+  }
   revalidatePath("/admin/products", "layout");
   revalidatePath("/", "layout");
   return { ok: true };

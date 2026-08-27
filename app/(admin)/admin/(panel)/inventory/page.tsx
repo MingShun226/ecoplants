@@ -39,7 +39,7 @@ export default async function InventoryPage({
   return (
     <AdminPage
       title="Inventory"
-      lead="On hand is what is on the shelf. Reserved is promised to a checkout in flight. Available is what the shop will sell."
+      lead="Every SKU in one place. On hand is what is on the shelf, reserved is promised to a checkout in flight, and available is what the shop will sell. Individual adjustments also live on each product."
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="SKUs" value={t.skus} />

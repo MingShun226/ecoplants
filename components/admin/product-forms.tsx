@@ -8,7 +8,6 @@ import {
   updateAttributes,
   updateProductFacts,
   updateTranslation,
-  updateVariant,
 } from "@/lib/admin/catalogue-actions";
 import type { PlantAttributes, ProductDetail, ProductTranslation } from "@/lib/admin/catalogue";
 import type { LocaleCode } from "@/lib/admin/enums";
@@ -618,82 +617,3 @@ function Choice({
 }
 
 // --------------------------------------------------------------- variants --
-
-export function VariantPriceForm({
-  variantId,
-  sku,
-  priceSen,
-  compareAtSen,
-}: {
-  variantId: string;
-  sku: string;
-  priceSen: number;
-  compareAtSen: number | null;
-}) {
-  const { pending, error, saved, run } = useSave();
-  // Edited in ringgit because that is what a person thinks in; converted to sen
-  // at the boundary, because that is what the database stores (ADR 0002).
-  const toMajor = (sen: number | null) => (sen === null ? "" : (sen / 100).toFixed(2));
-  const [price, setPrice] = useState(toMajor(priceSen));
-  const [compare, setCompare] = useState(toMajor(compareAtSen));
-
-  const dirty = price !== toMajor(priceSen) || compare !== toMajor(compareAtSen);
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        run(() =>
-          updateVariant(variantId, {
-            priceSen: Math.round(Number(price) * 100),
-            compareAtSen: compare.trim() === "" ? null : Math.round(Number(compare) * 100),
-          }),
-        );
-      }}
-      className="flex flex-wrap items-end gap-3"
-    >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`price-${variantId}`} className="text-[11px]">
-          Price (RM)
-        </Label>
-        <Input
-          id={`price-${variantId}`}
-          type="number"
-          step="0.01"
-          min="0"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          required
-          className="numeric h-8 w-28 rounded-sm text-[13px]"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`compare-${variantId}`} className="text-[11px]">
-          Was (RM)
-        </Label>
-        <Input
-          id={`compare-${variantId}`}
-          type="number"
-          step="0.01"
-          min="0"
-          value={compare}
-          onChange={(e) => setCompare(e.target.value)}
-          placeholder="—"
-          aria-label={`Compare-at price for ${sku}`}
-          className="numeric h-8 w-28 rounded-sm text-[13px]"
-        />
-      </div>
-
-      <Button type="submit" size="sm" variant="outline" disabled={pending || !dirty}>
-        {pending ? "Saving…" : saved ? "Saved" : "Save"}
-      </Button>
-
-      {error ? (
-        <p role="alert" className="w-full text-[12px] text-danger">
-          {error}
-        </p>
-      ) : null}
-    </form>
-  );
-}

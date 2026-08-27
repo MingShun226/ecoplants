@@ -7,6 +7,7 @@ import type {
   BadgeKey,
   Category,
   Product,
+  ProductImage,
   ProductTranslation,
   Variant,
 } from "@/types/catalog";
@@ -70,6 +71,41 @@ interface ProductRow {
     position: number;
     inventory: { quantity_on_hand: number; reserved: number } | null;
   }[];
+  product_images: {
+    storage_path: string;
+    kind: ProductImage["kind"];
+    position: number;
+    is_primary: boolean;
+    product_image_translations: { locale: Locale; alt: string }[];
+  }[];
+}
+
+/**
+ * Storage path to a public URL.
+ *
+ * The bucket is public read (migration 0027), so this is a plain CDN URL — no
+ * signed request per image, which is what lets Next/Image cache and transform
+ * them at the edge.
+ */
+function imageUrl(storagePath: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  return `${base}/storage/v1/object/public/product-images/${storagePath}`;
+}
+
+function toImage(
+  row: ProductRow["product_images"][number],
+  locale: Locale,
+  fallbackAlt: string,
+): ProductImage {
+  // Alt text is per-locale and optional. A missing one falls back to the
+  // product's own name rather than to an empty string — a screen reader
+  // announcing nothing is worse than announcing the plant.
+  const alt =
+    row.product_image_translations.find((t) => t.locale === locale)?.alt ??
+    row.product_image_translations[0]?.alt ??
+    fallbackAlt;
+
+  return { src: imageUrl(row.storage_path), alt, kind: row.kind };
 }
 
 /**
@@ -86,7 +122,8 @@ const PRODUCT_SELECT = `
   categories!inner ( slug ),
   product_translations ( locale, name, slug, tagline, description, care_summary, climate_note, toxicity_note ),
   plant_attributes ( light, water, pet_safe, difficulty, mature_height_cm, placement, air_purifying ),
-  product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, weight_grams, height_cm, pot_diameter_cm, position, inventory ( quantity_on_hand, reserved ) )
+  product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, weight_grams, height_cm, pot_diameter_cm, position, inventory ( quantity_on_hand, reserved ) ),
+  product_images ( storage_path, kind, position, is_primary, product_image_translations ( locale, alt ) )
 `;
 
 function toTranslation(row: ProductRow["product_translations"][number]): ProductTranslation {
@@ -159,7 +196,11 @@ function mapProduct(row: ProductRow): Product | null {
     variants: [...row.product_variants]
       .sort((x, y) => x.position - y.position)
       .map(toVariant),
-    images: [],
+    // Primary first, then by position. PlantImage picks by kind and falls back
+    // to the first — so the primary is what a card shows.
+    images: [...(row.product_images ?? [])]
+      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)
+      .map((image) => toImage(image, "en", fallback.name)),
     // Null, not 0. A product nobody has reviewed has no score; zero is the
     // worst possible one.
     rating: row.rating === null ? null : Number(row.rating),

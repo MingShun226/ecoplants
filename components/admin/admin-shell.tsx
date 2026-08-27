@@ -242,10 +242,7 @@ function Rail({
 
         <p className="mt-5 flex gap-2 px-3 text-[11px] leading-relaxed text-text-tertiary">
           <Images className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-          <span>
-            Product photography is not managed here yet — there is no imagery to
-            manage. See ADR&nbsp;0006.
-          </span>
+          <span>Photos, prices and stock all live on each product.</span>
         </p>
       </nav>
 

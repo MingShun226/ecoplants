@@ -53,9 +53,23 @@ export interface VariantRow {
   potMaterialKey: string | null;
   priceSen: number;
   compareAtSen: number | null;
+  weightGrams: number | null;
+  heightCm: number | null;
+  potDiameterCm: number | null;
   position: number;
   onHand: number;
   reserved: number;
+}
+
+export interface ProductImageRow {
+  id: string;
+  src: string;
+  storagePath: string;
+  kind: "catalog" | "lifestyle" | "detail" | "scale";
+  variantId: string | null;
+  position: number;
+  isPrimary: boolean;
+  alt: string;
 }
 
 export interface ProductSummary {
@@ -90,7 +104,13 @@ export interface ProductDetail extends ProductSummary {
   peninsularOnly: boolean;
   translations: ProductTranslation[];
   variants: VariantRow[];
+  images: ProductImageRow[];
   attributes: PlantAttributes | null;
+}
+
+/** The bucket is public read (0027), so this is a plain CDN URL. */
+function imageUrl(storagePath: string): string {
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/product-images/${storagePath}`;
 }
 
 const LIST_SELECT = `
@@ -147,11 +167,23 @@ interface DetailRow extends Omit<ListRow, "product_translations" | "product_vari
     pot_material_key: string | null;
     price_sen: number;
     compare_at_sen: number | null;
+    weight_grams: number | null;
+    height_cm: number | null;
+    pot_diameter_cm: number | null;
     position: number;
     inventory:
       | { quantity_on_hand: number; reserved: number }
       | { quantity_on_hand: number; reserved: number }[]
       | null;
+  }[];
+  product_images: {
+    id: string;
+    storage_path: string;
+    kind: ProductImageRow["kind"];
+    variant_id: string | null;
+    position: number;
+    is_primary: boolean;
+    product_image_translations: { locale: LocaleCode; alt: string }[];
   }[];
   plant_attributes: Record<string, unknown> | Record<string, unknown>[] | null;
 }
@@ -240,7 +272,8 @@ export async function getProduct(ref: string): Promise<ProductDetail | null> {
       id, ref, name_botanical, category_id, badges, rating, review_count,
       is_active, peninsular_only,
       product_translations ( locale, name, slug, tagline, description, care_summary, climate_note, toxicity_note ),
-      product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, position, inventory ( quantity_on_hand, reserved ) ),
+      product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, weight_grams, height_cm, pot_diameter_cm, position, inventory ( quantity_on_hand, reserved ) ),
+      product_images ( id, storage_path, kind, variant_id, position, is_primary, product_image_translations ( locale, alt ) ),
       plant_attributes ( light, water, pet_safe, difficulty, mature_height_cm, placement, air_purifying )
     `)
     .eq("ref", ref)
@@ -280,12 +313,29 @@ export async function getProduct(ref: string): Promise<ProductDetail | null> {
           potMaterialKey: v.pot_material_key,
           priceSen: v.price_sen,
           compareAtSen: v.compare_at_sen,
+          weightGrams: v.weight_grams,
+          heightCm: v.height_cm,
+          potDiameterCm: v.pot_diameter_cm,
           position: v.position,
           onHand: inv?.quantity_on_hand ?? 0,
           reserved: inv?.reserved ?? 0,
         };
       })
       .sort((a, b) => a.position - b.position),
+    // Primary first: it is the card image, so it should be the one an operator
+    // sees at the top of the strip.
+    images: [...(row.product_images ?? [])]
+      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)
+      .map((img) => ({
+        id: img.id,
+        src: imageUrl(img.storage_path),
+        storagePath: img.storage_path,
+        kind: img.kind,
+        variantId: img.variant_id,
+        position: img.position,
+        isPrimary: img.is_primary,
+        alt: img.product_image_translations.find((t) => t.locale === "en")?.alt ?? "",
+      })),
     attributes: attrs
       ? {
           light: (attrs.light as LightLevel) ?? null,

@@ -7,9 +7,10 @@ import {
   AttributesForm,
   ProductFactsForm,
   TranslationEditor,
-  VariantPriceForm,
   VisibilityToggle,
 } from "@/components/admin/product-forms";
+import { ImageManager } from "@/components/admin/image-manager";
+import { VariantEditor } from "@/components/admin/variant-editor";
 import { getProduct, listCategories } from "@/lib/admin/catalogue";
 import { formatSen } from "@/lib/admin/format";
 
@@ -79,7 +80,20 @@ export default async function ProductDetailPage({
             <TranslationEditor product={product} />
           </AdminCard>
 
-          <AdminCard title="Variants and prices" flush>
+          <AdminCard
+            title="Photos"
+            lead="The primary photo is the card image. Without one the shop draws generated artwork instead."
+          >
+            <ImageManager
+              productId={product.id}
+              productRef={product.ref}
+              productName={product.name}
+              images={product.images}
+              variants={product.variants}
+            />
+          </AdminCard>
+
+          <AdminCard title="Variants, prices and stock" flush>
             {product.variants.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-text-tertiary">
                 No variants. Nothing can be bought until there is at least one.
@@ -87,37 +101,15 @@ export default async function ProductDetailPage({
             ) : (
               <ul className="divide-y divide-border-subtle">
                 {product.variants.map((v) => (
-                  <li key={v.id} className="flex flex-wrap items-end justify-between gap-4 px-5 py-4">
-                    <div className="min-w-0">
-                      <p className="text-[13px] capitalize">{v.sizeKey}</p>
-                      <p className="numeric text-[11px] text-text-tertiary">{v.sku}</p>
-                      <p className="mt-1 text-[11px] text-text-tertiary">
-                        <span className="numeric">{v.onHand}</span> on hand
-                        {v.reserved > 0 ? (
-                          <>
-                            , <span className="numeric">{v.reserved}</span> reserved
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                    <VariantPriceForm
-                      variantId={v.id}
-                      sku={v.sku}
-                      priceSen={v.priceSen}
-                      compareAtSen={v.compareAtSen}
-                    />
-                  </li>
+                  <VariantEditor key={v.id} variant={v} productName={product.name} />
                 ))}
               </ul>
             )}
             <p className="border-t border-border-subtle px-5 py-3 text-[11px] leading-relaxed text-text-tertiary">
               Adding or removing a variant is not possible here yet — a variant carries a
-              SKU, inventory row and price history, and getting that wrong breaks orders
-              that reference it. Stock is adjusted in{" "}
-              <Link href="/admin/inventory" className="underline underline-offset-2">
-                Inventory
-              </Link>
-              .
+              SKU, an inventory row and price snapshots on historical orders, and getting
+              that wrong breaks orders that already reference it. Everything about an
+              existing one, stock included, is editable above.
             </p>
           </AdminCard>
 
@@ -130,7 +122,10 @@ export default async function ProductDetailPage({
         </div>
 
         <div className="flex flex-col gap-6">
-          <AdminCard title="Facts">
+          <AdminCard
+            title="Classification"
+            lead="What this plant is and where it sits in the shop. Not translated."
+          >
             <ProductFactsForm product={product} categories={categories} />
           </AdminCard>
 

@@ -353,7 +353,8 @@
     "petSafe": "Selamat Untuk Haiwan",
     "beginner": "Mudah Dijaga",
     "pots": "Pasu & Bekas",
-    "care": "Tanah & Penjagaan"
+    "care": "Tanah & Penjagaan",
+    "newArrivals": "Ketibaan baharu"
   },
   "categoryDescriptions": {
     "indoor": "Pokok yang subur di rumah dan pangsapuri Malaysia — dipilih untuk kelembapan kita, cahaya kita dan penghawa dingin kita.",
@@ -361,7 +362,8 @@
     "petSafe": "Setiap pokok di sini disenaraikan sebagai tidak toksik kepada kucing dan anjing oleh ASPCA. Tiada yang dimasukkan berdasarkan tekaan.",
     "beginner": "Pokok yang memaafkan untuk penjaga pokok kali pertama. Kalau anda pernah mematikan pokok, mulakan di sini.",
     "pots": "Terakota buatan tangan, seramik bersalut dan fibreclay ringan dalam saiz yang sesuai dengan pokok kami.",
-    "care": "Campuran aroid, baja, kawalan perosak dan alatan yang diadun untuk keadaan tanaman tropika."
+    "care": "Campuran aroid, baja, kawalan perosak dan alatan yang diadun untuk keadaan tanaman tropika.",
+    "newArrivals": "Pokok yang baru sampai, semasa ia masih menyesuaikan diri."
   },
   "badges": {
     "bestSeller": "Paling laris",
@@ -375,7 +377,8 @@
     "fullSun": "Panas terik",
     "flowering": "Berbunga",
     "fragrant": "Wangi",
-    "easy": "Mudah"
+    "easy": "Mudah",
+    "newArrival": "Baharu"
   },
   "sizes": {
     "small": "Kecil",

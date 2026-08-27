@@ -387,3 +387,119 @@ export async function updateSettings(fields: {
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// --------------------------------------------------------- new arrivals --
+
+/**
+ * Mark a product as newly arrived for a number of days, or clear it.
+ *
+ * A date rather than a flag, so it stops being true on its own. Nobody has to
+ * remember to un-tick it, which is how a New Arrivals page ends up two years
+ * stale.
+ */
+export async function setNewArrival(productId: string, days: number | null): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  if (days !== null && (!Number.isInteger(days) || days < 1 || days > 365)) {
+    return { ok: false, error: "Choose between 1 and 365 days." };
+  }
+
+  const until =
+    days === null ? null : new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("products")
+    .update({ new_until: until })
+    .eq("id", productId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/products", "layout");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// ------------------------------------------------------ category images --
+
+export async function uploadCategoryImage(form: FormData): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const file = form.get("file");
+  const categoryId = String(form.get("categoryId") ?? "");
+  const slug = String(form.get("slug") ?? "");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose an image first." };
+  }
+  if (!["image/jpeg", "image/png", "image/webp", "image/avif"].includes(file.type)) {
+    return { ok: false, error: "Use a JPEG, PNG, WebP or AVIF image." };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { ok: false, error: "The limit is 5 MB — resize it first." };
+  }
+
+  const supabase = await createClient();
+
+  // Same bucket as product photography, different prefix. One bucket means one
+  // set of policies to reason about.
+  const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `categories/${slug}/${crypto.randomUUID()}.${ext}`;
+
+  const upload = await supabase.storage
+    .from("product-images")
+    .upload(path, file, { contentType: file.type, cacheControl: "31536000" });
+  if (upload.error) return { ok: false, error: upload.error.message };
+
+  // Read the old path first so the replaced file can be removed after the row
+  // points at the new one — never before, or a failure leaves a broken image.
+  const { data: existing } = await supabase
+    .from("categories")
+    .select("image_path")
+    .eq("id", categoryId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("categories")
+    .update({ image_path: path })
+    .eq("id", categoryId);
+
+  if (error) {
+    await supabase.storage.from("product-images").remove([path]);
+    return { ok: false, error: error.message };
+  }
+
+  const previous = (existing as { image_path: string | null } | null)?.image_path;
+  if (previous) await supabase.storage.from("product-images").remove([previous]);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function removeCategoryImage(categoryId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("categories")
+    .select("image_path")
+    .eq("id", categoryId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("categories")
+    .update({ image_path: null })
+    .eq("id", categoryId);
+  if (error) return { ok: false, error: error.message };
+
+  const path = (data as { image_path: string | null } | null)?.image_path;
+  if (path) await supabase.storage.from("product-images").remove([path]);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

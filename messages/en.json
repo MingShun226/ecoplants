@@ -353,7 +353,8 @@
     "petSafe": "Pet-Safe Plants",
     "beginner": "Hard to Kill",
     "pots": "Pots & Planters",
-    "care": "Soil & Care"
+    "care": "Soil & Care",
+    "newArrivals": "New arrivals"
   },
   "categoryDescriptions": {
     "indoor": "Plants that thrive in Malaysian homes and apartments — chosen for our humidity, our light, and our aircon.",
@@ -361,7 +362,8 @@
     "petSafe": "Every plant here is listed as non-toxic to cats and dogs by the ASPCA. Nothing goes in this collection on a guess.",
     "beginner": "Forgiving plants for first-time plant parents. If you have killed something before, start here.",
     "pots": "Handmade terracotta, glazed ceramic and lightweight fibreclay in sizes that fit our plants.",
-    "care": "Aroid mix, fertiliser, pest control and tools blended for tropical growing conditions."
+    "care": "Aroid mix, fertiliser, pest control and tools blended for tropical growing conditions.",
+    "newArrivals": "The plants that landed most recently, while they are still settling in."
   },
   "badges": {
     "bestSeller": "Best seller",
@@ -375,7 +377,8 @@
     "fullSun": "Full sun",
     "flowering": "Flowering",
     "fragrant": "Fragrant",
-    "easy": "Easy"
+    "easy": "Easy",
+    "newArrival": "New"
   },
   "sizes": {
     "small": "Small",

@@ -68,6 +68,12 @@ export function PlantCard({
             <span className="absolute left-3.5 top-3.5 rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
               {ta("soldOut")}
             </span>
+          ) : product.isNew ? (
+            /* New outranks a badge: it is the reason to look now, and it is the
+               one label that stops being true on its own. */
+            <span className="absolute left-3.5 top-3.5 rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
+              {tb("newArrival")}
+            </span>
           ) : product.badges[0] ? (
             <span className="absolute left-3.5 top-3.5 rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
               {tb(product.badges[0])}

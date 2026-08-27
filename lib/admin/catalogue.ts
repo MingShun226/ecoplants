@@ -102,6 +102,16 @@ export interface PlantAttributes {
 
 export interface ProductDetail extends ProductSummary {
   peninsularOnly: boolean;
+  newUntil: string | null;
+  /**
+   * `newUntil` resolved against the clock here, in a plain async function.
+   * Null when this is not a new arrival.
+   *
+   * Not in the component: `Date.now()` during a render is an impure call —
+   * unstable across re-renders, and the two sides disagree at the moment a
+   * listing expires. React's lint rule enforces this, correctly.
+   */
+  newArrivalDaysLeft: number | null;
   translations: ProductTranslation[];
   variants: VariantRow[];
   images: ProductImageRow[];
@@ -149,6 +159,7 @@ function one<T>(v: T | T[] | null): T | null {
  */
 interface DetailRow extends Omit<ListRow, "product_translations" | "product_variants"> {
   peninsular_only: boolean;
+  new_until: string | null;
   product_translations: {
     locale: LocaleCode;
     name: string;
@@ -270,7 +281,7 @@ export async function getProduct(ref: string): Promise<ProductDetail | null> {
     .from("products")
     .select(`
       id, ref, name_botanical, category_id, badges, rating, review_count,
-      is_active, peninsular_only,
+      is_active, peninsular_only, new_until,
       product_translations ( locale, name, slug, tagline, description, care_summary, climate_note, toxicity_note ),
       product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, weight_grams, height_cm, pot_diameter_cm, position, inventory ( quantity_on_hand, reserved ) ),
       product_images ( id, storage_path, kind, variant_id, position, is_primary, product_image_translations ( locale, alt ) ),
@@ -290,6 +301,10 @@ export async function getProduct(ref: string): Promise<ProductDetail | null> {
   return {
     ...toSummary(row as unknown as ListRow, names),
     peninsularOnly: row.peninsular_only,
+    newUntil: row.new_until,
+    newArrivalDaysLeft: row.new_until
+      ? Math.ceil((new Date(row.new_until).getTime() - Date.now()) / 86_400_000)
+      : null,
     translations: row.product_translations
       .map((t) => ({
         locale: t.locale,
@@ -355,6 +370,7 @@ export async function getProduct(ref: string): Promise<ProductDetail | null> {
 export interface CategoryRow {
   id: string;
   slug: string;
+  imageSrc: string | null;
   kind: CategoryKind;
   position: number;
   isDerived: boolean;
@@ -369,7 +385,7 @@ export async function listCategories(): Promise<CategoryRow[]> {
   const [{ data: cats, error }, { data: products }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, slug, kind, position, is_derived, category_translations ( locale, name, description )")
+      .select("id, slug, kind, position, is_derived, image_path, category_translations ( locale, name, description )")
       .order("position"),
     supabase.from("products").select("category_id"),
   ]);
@@ -387,6 +403,7 @@ export async function listCategories(): Promise<CategoryRow[]> {
     kind: CategoryKind;
     position: number;
     is_derived: boolean;
+    image_path: string | null;
     category_translations: { locale: LocaleCode; name: string; description: string | null }[];
   }[]).map((c) => ({
     id: c.id,
@@ -394,6 +411,7 @@ export async function listCategories(): Promise<CategoryRow[]> {
     kind: c.kind,
     position: c.position,
     isDerived: c.is_derived,
+    imageSrc: c.image_path ? imageUrl(c.image_path) : null,
     // A derived category ("pet safe") is computed from attributes, so it has no
     // rows pointing at it and a count of zero would read as broken.
     productCount: c.is_derived ? -1 : (counts.get(c.id) ?? 0),

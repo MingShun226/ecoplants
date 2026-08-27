@@ -36,6 +36,7 @@ interface ProductRow {
   badges: string[] | null;
   rating: number | null;
   review_count: number;
+  new_until: string | null;
   peninsular_only: boolean;
   categories: { slug: string } | null;
   product_translations: {
@@ -118,6 +119,7 @@ const PRODUCT_SELECT = `
   badges,
   rating,
   review_count,
+  new_until,
   peninsular_only,
   categories!inner ( slug ),
   product_translations ( locale, name, slug, tagline, description, care_summary, climate_note, toxicity_note ),
@@ -201,6 +203,8 @@ function mapProduct(row: ProductRow): Product | null {
     images: [...(row.product_images ?? [])]
       .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)
       .map((image) => toImage(image, "en", fallback.name)),
+    newUntil: row.new_until,
+    isNew: row.new_until !== null && new Date(row.new_until).getTime() > Date.now(),
     // Null, not 0. A product nobody has reviewed has no score; zero is the
     // worst possible one.
     rating: row.rating === null ? null : Number(row.rating),
@@ -259,6 +263,7 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
  * in `category_translations`; this list is the shape.
  */
 export const categories: Category[] = [
+  { id: "cat-new", slug: "new", key: "newArrivals", type: "plants" },
   { id: "cat-indoor", slug: "indoor", key: "indoor", type: "plants" },
   { id: "cat-outdoor", slug: "outdoor", key: "outdoor", type: "plants" },
   { id: "cat-pet-safe", slug: "pet-safe", key: "petSafe", type: "plants" },
@@ -278,6 +283,12 @@ export function getCategory(slug: string): Category | undefined {
  */
 export async function getProductsByCategory(slug: string): Promise<Product[]> {
   const all = await getProducts();
+  // Newest first — a "new arrivals" list ordered any other way is just a list.
+  if (slug === "new") {
+    return all
+      .filter((p) => p.isNew)
+      .sort((a, b) => new Date(b.newUntil!).getTime() - new Date(a.newUntil!).getTime());
+  }
   if (slug === "pet-safe") return all.filter((p) => p.attributes.petSafe === true);
   if (slug === "beginner") return all.filter((p) => p.attributes.difficulty === "beginner");
   if (slug === "indoor") return all.filter((p) => p.attributes.placement !== "outdoor");

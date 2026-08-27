@@ -95,6 +95,19 @@ export interface ProductBase {
   attributes: PlantAttributes;
   variants: Variant[];
   images: ProductImage[];
+  /**
+   * While this is in the future the plant is a new arrival. A date, not a flag,
+   * so it expires without anyone remembering to clear it.
+   */
+  newUntil: string | null;
+  /**
+   * `newUntil` resolved against the clock, **on the server**.
+   *
+   * Comparing to `Date.now()` inside a client component would give the server
+   * render and the hydration one clock each, and a plant expiring between them
+   * would mismatch. Resolved once here, both sides agree by construction.
+   */
+  isNew: boolean;
   /** Null until a product has at least one approved review. Never invented. */
   rating: number | null;
   reviewCount: number;

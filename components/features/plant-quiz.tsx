@@ -2,7 +2,7 @@
 
 import { ArrowRight, PawPrint } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { PlantImage } from "@/components/brand/plant-image";
 import { RuledEyebrow } from "@/components/brand/primitives";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { avoidList, quizQuestions, scoreQuiz, type QuizAnswers } from "@/lib/data/quiz";
+import { recordQuizResponse } from "@/lib/data/quiz-actions";
 import { toMajor } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { fromPriceSen, type Product } from "@/types/catalog";
@@ -132,6 +133,22 @@ function Results({
 
   const matches = scoreQuiz(products, answers).slice(0, 3);
   const avoid = avoidList(products, answers);
+
+  // Recorded once the results are actually reached — not per question, which
+  // would log half-finished attempts as though they were opinions.
+  //
+  // Fire-and-forget on purpose: the action swallows its own failures, and a
+  // shopper looking at their plants must never wait on analytics.
+  const recorded = useRef(false);
+  useEffect(() => {
+    if (recorded.current || matches.length === 0) return;
+    recorded.current = true;
+    void recordQuizResponse(
+      answers as Record<string, string>,
+      matches.map((m) => m.product.id),
+      locale,
+    );
+  }, [answers, matches, locale]);
 
   if (matches.length === 0) {
     return (

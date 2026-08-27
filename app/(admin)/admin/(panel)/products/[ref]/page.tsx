@@ -10,6 +10,7 @@ import {
   VisibilityToggle,
 } from "@/components/admin/product-forms";
 import { ImageManager } from "@/components/admin/image-manager";
+import { NewArrivalControl } from "@/components/admin/misc-forms";
 import { VariantEditor } from "@/components/admin/variant-editor";
 import { getProduct, listCategories } from "@/lib/admin/catalogue";
 import { formatSen } from "@/lib/admin/format";
@@ -127,6 +128,13 @@ export default async function ProductDetailPage({
             lead="What this plant is and where it sits in the shop. Not translated."
           >
             <ProductFactsForm product={product} categories={categories} />
+          </AdminCard>
+
+          <AdminCard
+            title="New arrival"
+            lead="Puts this on the New arrivals page and badges its card."
+          >
+            <NewArrivalControl productId={product.id} daysLeft={product.newArrivalDaysLeft} />
           </AdminCard>
 
           <AdminCard title="At a glance">

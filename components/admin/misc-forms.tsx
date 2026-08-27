@@ -1,14 +1,18 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ImageIcon, Sparkles, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   deleteReview,
   reorderCategory,
   setReviewApproved,
+  removeCategoryImage,
+  setNewArrival,
   updateCategoryTranslation,
   updateSettings,
+  uploadCategoryImage,
 } from "@/lib/admin/catalogue-actions";
 import type { LocaleCode } from "@/lib/admin/enums";
 import { LOCALE_LABEL, LOCALES } from "@/lib/admin/enums";
@@ -399,5 +403,184 @@ export function SettingsForm({ settings }: { settings: ShopSettings }) {
         ) : null}
       </div>
     </form>
+  );
+}
+
+// ----------------------------------------------------------- new arrivals --
+
+/**
+ * How long this plant counts as newly arrived.
+ *
+ * Presets rather than a date picker: the question is "how long should this be
+ * on the New Arrivals page", not "what is the exact expiry timestamp". Picking
+ * a date by hand invites someone to choose one in the past.
+ */
+const NEW_PRESETS = [14, 30, 60, 90] as const;
+
+export function NewArrivalControl({
+  productId,
+  daysLeft,
+}: {
+  productId: string;
+  /**
+   * Resolved against the clock **on the server**, and null when this is not a
+   * new arrival. Comparing to Date.now() here would be an impure call during
+   * render: unstable across re-renders, and a source of hydration mismatch.
+   */
+  daysLeft: number | null;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const active = daysLeft !== null && daysLeft > 0;
+
+  const run = (days: number | null) =>
+    start(async () => {
+      setError(null);
+      const result = await setNewArrival(productId, days);
+      if (result.ok) router.refresh();
+      else setError(result.error);
+    });
+
+  return (
+    <div className="flex flex-col gap-3">
+      {active ? (
+        <p className="flex items-center gap-2 text-[13px]">
+          <Sparkles className="size-3.5 shrink-0 text-leaf-700" aria-hidden="true" />
+          On New arrivals for{" "}
+          <span className="numeric font-medium">
+            {daysLeft} more {daysLeft === 1 ? "day" : "days"}
+          </span>
+        </p>
+      ) : (
+        <p className="text-[13px] text-text-secondary">Not listed as a new arrival.</p>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        {NEW_PRESETS.map((d) => (
+          <button
+            key={d}
+            type="button"
+            disabled={pending}
+            onClick={() => run(d)}
+            className="rounded-full border border-border-default px-2.5 py-1 text-[12px] text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-50"
+          >
+            {active ? `Reset to ${d}d` : `${d} days`}
+          </button>
+        ))}
+        {active ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(null)}
+            className="rounded-full border border-border-default px-2.5 py-1 text-[12px] text-text-tertiary transition-colors hover:border-danger hover:text-danger disabled:opacity-50"
+          >
+            Remove
+          </button>
+        ) : null}
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-[12px] text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      <p className="text-[11px] leading-relaxed text-text-tertiary">
+        Expires on its own — no need to come back and switch it off.
+      </p>
+    </div>
+  );
+}
+
+// ------------------------------------------------------- category images --
+
+export function CategoryImageForm({
+  categoryId,
+  slug,
+  name,
+  src,
+}: {
+  categoryId: string;
+  slug: string;
+  name: string;
+  src: string | null;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const upload = (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    start(async () => {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("categoryId", categoryId);
+      form.set("slug", slug);
+      const result = await uploadCategoryImage(form);
+      if (!result.ok) setError(result.error);
+      router.refresh();
+      if (inputRef.current) inputRef.current.value = "";
+    });
+  };
+
+  return (
+    <div className="flex items-start gap-3">
+      <div className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border-subtle bg-surface-sunken">
+        {src ? (
+          <Image src={src} alt={name} fill sizes="64px" className="object-cover" />
+        ) : (
+          <span className="flex h-full items-center justify-center">
+            <ImageIcon className="size-4 text-text-tertiary" aria-hidden="true" />
+          </span>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          onChange={(e) => upload(e.target.files?.[0])}
+          className="hidden"
+          id={`cat-img-${categoryId}`}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => inputRef.current?.click()}
+          >
+            {pending ? "Uploading…" : src ? "Replace" : "Add photo"}
+          </Button>
+          {src ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  await removeCategoryImage(categoryId);
+                  router.refresh();
+                })
+              }
+            >
+              Remove
+            </Button>
+          ) : null}
+        </div>
+        {error ? (
+          <p role="alert" className="mt-2 text-[12px] leading-relaxed text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }

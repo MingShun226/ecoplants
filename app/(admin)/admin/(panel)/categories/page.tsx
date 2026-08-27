@@ -2,7 +2,11 @@ import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminCard, AdminPage } from "@/components/admin/admin-page";
-import { CategoryCopyForm, CategoryOrderControls } from "@/components/admin/misc-forms";
+import {
+  CategoryCopyForm,
+  CategoryImageForm,
+  CategoryOrderControls,
+} from "@/components/admin/misc-forms";
 import { listCategories, LOCALES } from "@/lib/admin/catalogue";
 
 export const metadata: Metadata = { title: "Categories" };
@@ -57,7 +61,13 @@ export default async function CategoriesPage() {
                 </div>
               </div>
 
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col gap-5">
+                <CategoryImageForm
+                  categoryId={c.id}
+                  slug={c.slug}
+                  name={c.name}
+                  src={c.imageSrc}
+                />
                 <CategoryCopyForm categoryId={c.id} translations={c.translations} />
               </div>
             </li>

@@ -4,12 +4,15 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Wordmark } from "@/components/brand/logo";
 import { LeafRule } from "@/components/brand/primitives";
+import { SheetClose } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 
 /**
- * The drawer closes from its own links' onClick rather than from a pathname
- * effect — setState inside an effect costs an extra render pass, and Radix's
- * Sheet already owns the open state.
+ * Every link is wrapped in `SheetClose`, which is what actually dismisses the
+ * drawer on tap. Radix owns the open state, so closing through its own control
+ * beats a pathname effect: no extra render pass, and it still works for a link
+ * to the page you are already on, where the pathname never changes and an
+ * effect would leave the drawer sitting open over the page.
  */
 export function MobileNav({
   items,
@@ -35,16 +38,18 @@ export function MobileNav({
         <ul className="flex flex-col gap-1">
           {items.map((item) => (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                className="group flex items-center justify-between py-3 font-display text-xl"
-              >
-                {item.label}
-                <ArrowUpRight
-                  className="size-4 text-clay-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                  aria-hidden="true"
-                />
-              </Link>
+              <SheetClose asChild>
+                <Link
+                  href={item.href}
+                  className="group flex items-center justify-between py-3 font-display text-xl"
+                >
+                  {item.label}
+                  <ArrowUpRight
+                    className="size-4 text-clay-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </SheetClose>
             </li>
           ))}
         </ul>
@@ -54,12 +59,14 @@ export function MobileNav({
         <ul className="flex flex-col gap-1">
           {secondary.map((item) => (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                className="block py-2.5 text-sm text-text-secondary"
-              >
-                {item.label}
-              </Link>
+              <SheetClose asChild>
+                <Link
+                  href={item.href}
+                  className="block py-2.5 text-sm text-text-secondary"
+                >
+                  {item.label}
+                </Link>
+              </SheetClose>
             </li>
           ))}
         </ul>

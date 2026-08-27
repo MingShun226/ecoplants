@@ -64,27 +64,38 @@ export function PlantCard({
             />
           </div>
 
-          {soldOut ? (
-            <span className="absolute left-3.5 top-3.5 rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
-              {ta("soldOut")}
-            </span>
-          ) : product.isNew ? (
-            /* New outranks a badge: it is the reason to look now, and it is the
-               one label that stops being true on its own. */
-            <span className="absolute left-3.5 top-3.5 rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
-              {tb("newArrival")}
-            </span>
-          ) : product.badges[0] ? (
-            <span className="absolute left-3.5 top-3.5 rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
-              {tb(product.badges[0])}
-            </span>
-          ) : null}
+          {/* Both badges share one row rather than being pinned to opposite
+              corners independently. Two absolutes at `left` and `right` overlap
+              the moment the card is narrower than the sum of their labels —
+              which is every two-up grid on a phone, where "LOW LIGHT" and
+              "PET-SAFE" collided. Here they wrap instead, and the corner split
+              comes back once the card is wide enough to hold both on one line. */}
+          <div className="pointer-events-none absolute inset-x-3.5 top-3.5 flex flex-wrap items-start gap-1.5 *:whitespace-nowrap @[15rem]:flex-nowrap">
+            {soldOut ? (
+              <span className="rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
+                {ta("soldOut")}
+              </span>
+            ) : product.isNew ? (
+              /* New outranks a badge: it is the reason to look now, and it is the
+                 one label that stops being true on its own. */
+              <span className="rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
+                {tb("newArrival")}
+              </span>
+            ) : product.badges[0] ? (
+              <span className="rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
+                {tb(product.badges[0])}
+              </span>
+            ) : null}
 
-          {product.attributes.petSafe === true ? (
-            <span className="absolute right-3.5 top-3.5">
-              <PetSafetyBadge petSafe className="bg-canvas/90 backdrop-blur-sm" />
-            </span>
-          ) : null}
+            {/* `ml-auto` only once the split is back on: alone on a narrow card
+                it should sit with the others at the left, not stranded right. */}
+            {product.attributes.petSafe === true ? (
+              <PetSafetyBadge
+                petSafe
+                className="bg-canvas/90 backdrop-blur-sm @[15rem]:ml-auto"
+              />
+            ) : null}
+          </div>
 
           {/* Rising arrow chip — the whole card is already the link. */}
           <span

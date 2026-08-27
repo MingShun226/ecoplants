@@ -7,6 +7,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CartDrawer } from "@/components/features/cart-drawer";
 import { onOpenCartDrawer, useCart } from "@/components/features/cart-provider";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 import { toMajor } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
@@ -27,27 +28,83 @@ export interface SearchEntry {
 }
 
 /**
+ * The matches, rendered identically for the inline panel and the sheet. Pulled
+ * out so the two forms of search cannot drift apart — a result row that only
+ * shows the price on desktop is the kind of difference nobody notices until a
+ * customer does.
+ */
+function SearchResults({
+  results,
+  onPick,
+  emptyLabel,
+}: {
+  results: readonly SearchEntry[];
+  onPick: () => void;
+  emptyLabel: string;
+}) {
+  const format = useFormatter();
+
+  if (results.length === 0) {
+    return <p className="px-4 py-6 text-center text-sm text-text-secondary">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul>
+      {results.map((entry) => (
+        <li key={entry.id}>
+          <Link
+            href={`/plants/${entry.slug}`}
+            onClick={onPick}
+            className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-sunken"
+          >
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-[14.5px]">{entry.name}</span>
+              <span className="truncate text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary">
+                {entry.meta}
+              </span>
+            </span>
+            <span className="numeric shrink-0 text-[13px] font-medium">
+              {format.number(toMajor(entry.fromSen), "currency")}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * Header actions: search and basket.
  *
- * The search icon grows into a field in place rather than opening an overlay or
- * navigating to a results page. That keeps the header a single continuous
- * object — the icon becomes the left edge of the input, so nothing appears from
- * nowhere. Width is the only animated property, which is why it can run at
- * 450ms without feeling slow.
+ * Search takes two forms, because one does not fit both.
  *
- * Results drop straight into a panel under the field. For a catalogue this size
- * a dedicated results page is a wasted navigation: you can see everything that
- * matches before you finish typing.
+ * From `lg` up the icon grows into a field in place. That keeps the header a
+ * single continuous object — the icon becomes the left edge of the input, so
+ * nothing appears from nowhere — and width is the only animated property, which
+ * is why it can run at 450ms without feeling slow.
+ *
+ * Below `lg` that field has nowhere to grow into. The header row already holds
+ * a menu button, the wordmark and three icons, so the pill was being squeezed
+ * to a couple of hundred pixels and clipping its own placeholder. There it
+ * opens a sheet instead, which is the same vocabulary the catalogue filter uses
+ * on small screens. It comes from the top rather than the bottom: the on-screen
+ * keyboard takes the bottom half, and results have to stay above it.
+ *
+ * Either way results drop in live. For a catalogue this size a dedicated
+ * results page is a wasted navigation — you can see everything that matches
+ * before you finish typing.
  */
 export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
   const t = useTranslations("nav");
   const ts = useTranslations("search");
   const tAccount = useTranslations("account");
   const ta = useTranslations("actions");
-  const format = useFormatter();
   const { count } = useCart();
 
   const [searchOpen, setSearchOpen] = useState(false);
+  /** The small-screen sheet. Separate from `searchOpen` so the outside-click
+      handler below, which belongs to the inline field, never fires against it. */
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +125,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
   // after you look away reads as broken.
   const closeSearch = useCallback(() => {
     setSearchOpen(false);
+    setSheetOpen(false);
     setQuery("");
   }, []);
 
@@ -99,7 +157,17 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
   return (
     <>
       <div className="flex items-center gap-0.5" ref={wrapRef}>
-        <div className="relative flex items-center">
+        {/* Small screens: a plain button that opens the sheet below. */}
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-label={t("search")}
+          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100 lg:hidden"
+        >
+          <Search className="size-[18px]" aria-hidden="true" />
+        </button>
+
+        <div className="relative hidden items-center lg:flex">
           {/* Width is the only animated property, which is why it can run at
               450ms without feeling slow. Driven by CSS rather than by a measured
               pixel value: min() sizes it against the viewport with no resize
@@ -158,33 +226,11 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border-subtle bg-canvas text-text-primary shadow-overlay"
               >
-                {results.length > 0 ? (
-                  <ul>
-                    {results.map((entry) => (
-                      <li key={entry.id}>
-                        <Link
-                          href={`/plants/${entry.slug}`}
-                          onClick={closeSearch}
-                          className="flex items-center justify-between gap-4 border-b border-border-subtle px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-sunken"
-                        >
-                          <span className="flex min-w-0 flex-col gap-0.5">
-                            <span className="truncate text-[14.5px]">{entry.name}</span>
-                            <span className="truncate text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary">
-                              {entry.meta}
-                            </span>
-                          </span>
-                          <span className="numeric shrink-0 text-[13px] font-medium">
-                            {format.number(toMajor(entry.fromSen), "currency")}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="px-4 py-6 text-center text-sm text-text-secondary">
-                    {ts("emptyTitle")}
-                  </p>
-                )}
+                <SearchResults
+                  results={results}
+                  onPick={closeSearch}
+                  emptyLabel={ts("emptyTitle")}
+                />
               </m.div>
             ) : null}
           </AnimatePresence>
@@ -222,6 +268,60 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
           <span className="sr-only">{ta("itemsInCart", { count })}</span>
         </button>
       </div>
+
+      {/* Small-screen search. `text-base` on the input is not a style choice:
+          iOS Safari zooms the whole page in when a focused field is under 16px,
+          and it does not zoom back out afterwards. */}
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={(next) => {
+          setSheetOpen(next);
+          if (!next) setQuery("");
+        }}
+      >
+        <SheetContent
+          side="top"
+          showCloseButton={false}
+          className="max-h-[85dvh] gap-0 rounded-b-2xl bg-canvas p-0 text-text-primary lg:hidden"
+        >
+          <SheetTitle className="sr-only">{t("search")}</SheetTitle>
+
+          <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
+            <Search className="size-[18px] shrink-0 opacity-50" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={ts("placeholder")}
+              aria-label={t("search")}
+              type="search"
+              autoComplete="off"
+              className="h-10 w-full min-w-0 bg-transparent text-base outline-none placeholder:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={closeSearch}
+              aria-label={ta("close")}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100"
+            >
+              <X className="size-[18px]" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {trimmed ? (
+              <SearchResults
+                results={results}
+                onPick={closeSearch}
+                emptyLabel={ts("emptyTitle")}
+              />
+            ) : (
+              <p className="px-4 py-8 text-center text-sm text-text-tertiary">
+                {ts("placeholder")}
+              </p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>

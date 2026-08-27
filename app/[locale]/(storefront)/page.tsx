@@ -13,7 +13,6 @@ import type { Locale } from "@/i18n/routing";
 import {
   categories,
   getFeaturedProducts,
-  getProducts,
   getProductsByCategory,
 } from "@/lib/data/queries";
 import { getSettings, whatsappUrl } from "@/lib/data/settings";
@@ -111,7 +110,7 @@ export default async function HomePage({
 
   return (
     <>
-      <Hero plants={await getProducts()} />
+      <Hero />
 
       {/* ------------------------------------------------------- Categories */}
       <section className="section-y">

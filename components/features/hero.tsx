@@ -1,9 +1,9 @@
 import { ArrowRight, Moon, PawPrint, Sun, SunMedium } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { getSettings } from "@/lib/data/settings";
-import { BotanicalPlate, inferLeafShape } from "@/components/brand/plant-image";
 import { Link } from "@/i18n/navigation";
-import type { Product } from "@/types/catalog";
+import heroBackdrop from "@/public/images/hero.webp";
 
 /**
  * The hero: one message, one action, one live object.
@@ -17,7 +17,7 @@ import type { Product } from "@/types/catalog";
  * where Gold puts its gold rate: not a decorative ticker, but the proof behind
  * "we only sell what survives here".
  */
-export async function Hero({ plants }: { plants: Product[] }) {
+export async function Hero() {
   const { guaranteeDays: days } = await getSettings();
   const t = await getTranslations("home");
   const tg = await getTranslations("guarantee");
@@ -29,38 +29,47 @@ export async function Hero({ plants }: { plants: Product[] }) {
     { Icon: PawPrint, label: t("spacePets"), body: t("spacePetsBody"), href: "/category/pet-safe" },
   ];
 
-  const feature = plants[0];
-
   return (
     <section className="on-dark relative isolate overflow-hidden bg-[oklch(0.185_0.024_146)]">
-      {/* Living backdrop: an oversized botanical plate dissolving in from the
-          right, plus a warm wash. Decorative, so it carries no alt text and the
-          drift gates on reduced-motion. */}
-      {feature ? (
-        <div
-          aria-hidden="true"
-          className="grain pointer-events-none absolute inset-0 -z-10 opacity-40"
-          style={{
-            maskImage: "radial-gradient(105% 115% at 84% 45%, #000 28%, transparent 74%)",
-            WebkitMaskImage: "radial-gradient(105% 115% at 84% 45%, #000 28%, transparent 74%)",
-          }}
-        >
-          <div className="hero-drift-slower absolute inset-0 scale-110">
-            <BotanicalPlate
-              seed={feature.id}
-              shape={inferLeafShape(feature)}
-              ground="dark"
-              showPot={false}
-            />
-          </div>
-        </div>
-      ) : null}
+      {/* A photograph, not a drawing: a monstera against a dark apartment wall
+          at dusk, framed with its left two-thirds deliberately empty so the
+          headline has somewhere to sit. Decorative — the headline already says
+          what the page is — so it carries no alt text.
+
+          `object-cover` means a tall viewport crops the sides. The subject sits
+          right of centre and the left of the frame is near-black, so a centre
+          crop on a phone lands on wall rather than on leaves, which is the half
+          that keeps the copy readable. */}
+      <Image
+        src={heroBackdrop}
+        alt=""
+        aria-hidden="true"
+        fill
+        // The LCP element on the site's most-visited page.
+        priority
+        quality={82}
+        sizes="100vw"
+        className="-z-10 object-cover"
+      />
+
+      {/* Scrim. The photograph is already dark where the copy sits, but "already
+          dark" is not a contrast guarantee across every crop this takes at every
+          viewport, and the headline is the one thing here that has to stay
+          readable. The flat layer carries small screens, where the crop is
+          tightest and the copy runs full width; the angled layer weights the
+          left on wide ones and clears before it reaches the plant. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[oklch(0.185_0.024_146/0.5)] lg:bg-[oklch(0.185_0.024_146/0.12)]"
+      />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
-          background:
-            "radial-gradient(62% 80% at 78% 22%, oklch(0.398 0.047 135 / 0.42) 0%, transparent 66%)",
+          background: [
+            "linear-gradient(to top, oklch(0.185 0.024 146 / 0.55) 0%, transparent 22%)",
+            "linear-gradient(100deg, oklch(0.185 0.024 146 / 0.92) 0%, oklch(0.185 0.024 146 / 0.66) 36%, transparent 70%)",
+          ].join(", "),
         }}
       />
 

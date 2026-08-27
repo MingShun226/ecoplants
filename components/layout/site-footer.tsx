@@ -112,12 +112,17 @@ export async function SiteFooter() {
                 <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-text-tertiary">
                   {column.heading}
                 </h2>
-                <ul className="mt-4 flex flex-col gap-2.5">
+                {/* `inline-block` plus vertical padding, rather than a bigger
+                    gap: the padding belongs to the link, so it is part of what
+                    you can tap. These were 17px tall — the height of the text
+                    and nothing else — which is a hard target for a thumb on the
+                    one part of the page people reach for while scrolling. */}
+                <ul className="mt-3 flex flex-col gap-0.5">
                   {column.links.map((link) => (
                     <li key={link.href}>
                       <Link
                         href={link.href}
-                        className="text-sm text-text-secondary transition-colors hover:text-text-primary"
+                        className="inline-block py-1.5 text-sm text-text-secondary transition-colors hover:text-text-primary"
                       >
                         {link.label}
                       </Link>

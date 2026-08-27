@@ -1,21 +1,13 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { RuledEyebrow } from "@/components/brand/primitives";
-import { FilterBar } from "@/components/features/filter-bar";
-import { PlantGrid } from "@/components/features/plant-card";
+import { CategoryResults } from "@/components/features/category-results";
 import { RevealSection } from "@/components/features/reveal-section";
-import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import {
-  applyFacets,
-  facetCounts,
-  parseFacets,
-  sortProducts,
-  type SortKey,
-} from "@/lib/data/facets";
 import { categories, getCategory, getProductsByCategory } from "@/lib/data/queries";
 
 export function generateStaticParams() {
@@ -37,37 +29,32 @@ export async function generateMetadata({
   return { title: tc(category.key), description: tcd(category.key) };
 }
 
+/**
+ * Deliberately does not read `searchParams`.
+ *
+ * Reading it — even once, even for a default — opts the whole route out of
+ * static rendering, and these are the pages the primary navigation points at.
+ * The filter state lives in the query string exactly as before; it is read in
+ * `CategoryResults` on the client instead, so this page prerenders to a file
+ * and a filter click costs no round trip.
+ */
 export default async function CategoryPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ locale: string; slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // params and searchParams are async in Next.js 16.
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const query = await searchParams;
 
   const category = getCategory(slug);
   if (!category) notFound();
 
-  const t = await getTranslations("plp");
   const tc = await getTranslations("categories");
   const tcd = await getTranslations("categoryDescriptions");
   const tn = await getTranslations("nav");
-  const ta = await getTranslations("actions");
-  const ts = await getTranslations("shipping");
   const activeLocale = await getLocale();
 
-  const selected = parseFacets(query);
-  const sort = (typeof query.sort === "string" ? query.sort : "featured") as SortKey;
-
   const all = await getProductsByCategory(slug);
-  const results = sortProducts(applyFacets(all, selected), sort);
-  // Counted here rather than in the client so the numbers come from the same
-  // source as the results, and cannot drift from them.
-  const counts = facetCounts(all, selected);
   const basePath = `/${activeLocale}/category/${slug}`;
 
   return (
@@ -94,35 +81,13 @@ export default async function CategoryPage({
         </RevealSection>
 
         <div className="mt-12">
-          <FilterBar
-            basePath={basePath}
-            counts={counts}
-            resultCount={results.length}
-            totalCount={all.length}
-          />
-
-          {results.length > 0 ? (
-            <PlantGrid products={results} className="mt-12" />
-          ) : (
-            <div className="mt-12 rounded-xl border border-dashed border-border-default bg-surface-sunken px-6 py-20 text-center">
-              <h2 className="font-display text-xl">{t("emptyTitle")}</h2>
-              <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-                {t("emptyBody")}
-              </p>
-              <Button asChild className="mt-7 px-6">
-                <Link href="/quiz">{ta("takeQuiz")}</Link>
-              </Button>
-            </div>
-          )}
-
-          {results.some((p) => p.peninsularOnly) ? (
-            <p className="mt-14 rounded-lg border border-border-subtle bg-surface-sunken p-5 text-sm leading-relaxed text-text-secondary">
-              <strong className="font-medium text-text-primary">
-                {t("deliveryNoteLabel")}
-              </strong>{" "}
-              {ts("eastMalaysia")}
-            </p>
-          ) : null}
+          {/* `useSearchParams` suspends during prerender. Without this boundary
+              Next cannot statically render the page at all and falls back to
+              rendering the whole route on demand — which is the thing being
+              fixed here. */}
+          <Suspense fallback={<div className="min-h-[60vh]" />}>
+            <CategoryResults products={all} basePath={basePath} />
+          </Suspense>
         </div>
       </div>
     </div>

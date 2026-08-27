@@ -231,7 +231,12 @@ function MobileFilters({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="lg:hidden">
+        {/* 44px tall on touch, not the 32px `size="sm"` gives. This and the
+            sort control are the only two things anyone taps on a category page
+            before the grid, and a 32px target is below every touch guideline
+            there is. It only renders below `lg`, so the height costs desktop
+            nothing. */}
+        <Button variant="outline" size="sm" className="h-11 px-4 lg:hidden">
           <SlidersHorizontal className="size-4" aria-hidden="true" />
           {t("filter")}
           {activeCount > 0 ? (
@@ -370,7 +375,11 @@ function SortSelect({ basePath }: { basePath: string }) {
       <SelectTrigger
         size="sm"
         aria-label={t("sort")}
-        className="w-auto min-w-36 shrink-0 rounded-full border-border-default"
+        // Matches the Filter button's touch height, dropping back to compact
+        // once there is a pointer. Written in the same `data-[size=sm]` form as
+        // the base rule on purpose: an attribute selector outranks a plain
+        // `h-11`, so a bare height class loses and the control stays 32px.
+        className="w-auto min-w-36 shrink-0 rounded-full border-border-default data-[size=sm]:h-11 lg:data-[size=sm]:h-8"
       >
         <SelectValue />
       </SelectTrigger>

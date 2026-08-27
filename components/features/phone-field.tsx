@@ -58,7 +58,13 @@ export function PhoneField({
           complete ? "border-leaf-700" : "border-border-default focus-within:border-border-strong",
         )}
       >
-        <span className="numeric flex select-none items-center border-r border-border-default bg-surface-sunken px-3.5 text-sm text-text-secondary">
+        {/* `text-base md:text-sm` on the field is not a size preference — it is
+            the same rule `components/ui/input.tsx` follows. iOS Safari zooms the
+            page in whenever a focused field is under 16px and never zooms back
+            out, so a 14px input here left every phone user stranded at 1.3x on
+            the login, signup and checkout screens. The prefix tracks the field
+            so the two stay on one baseline. */}
+        <span className="numeric flex select-none items-center border-r border-border-default bg-surface-sunken px-3.5 text-base text-text-secondary md:text-sm">
           +60
         </span>
         <input
@@ -73,7 +79,7 @@ export function PhoneField({
           onChange={(e) => onChange(formatPhoneInput(e.target.value))}
           placeholder="12-345 6789"
           aria-describedby={hintId}
-          className="numeric h-10 w-full min-w-0 bg-transparent px-3.5 text-sm outline-none placeholder:text-text-tertiary"
+          className="numeric h-10 w-full min-w-0 bg-transparent px-3.5 text-base outline-none placeholder:text-text-tertiary md:text-sm"
         />
       </div>
 

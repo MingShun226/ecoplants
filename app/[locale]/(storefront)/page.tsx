@@ -1,8 +1,10 @@
 import { ArrowRight, ArrowUpRight, MessageCircle, PawPrint, ShieldCheck, Truck } from "lucide-react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import Image from "next/image";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { PlantImage } from "@/components/brand/plant-image";
 import { RuledEyebrow } from "@/components/brand/primitives";
+import { CardRail } from "@/components/features/card-rail";
 import { CareLine } from "@/components/features/care";
 import { Hero } from "@/components/features/hero";
 import { PlantCard } from "@/components/features/plant-card";
@@ -12,6 +14,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import {
   categories,
+  getCategoryImages,
   getFeaturedProducts,
   getProductsByCategory,
 } from "@/lib/data/queries";
@@ -80,9 +83,10 @@ export default async function HomePage({
   const plantCategories = categories.filter((c) => c.type === "plants");
 
   // One round trip for the whole catalogue; every section slices from it.
-  const [featured, petSafeAll] = await Promise.all([
+  const [featured, petSafeAll, categoryCovers] = await Promise.all([
     getFeaturedProducts(8),
     getProductsByCategory("pet-safe"),
+    getCategoryImages(),
   ]);
   const petSafe = petSafeAll.slice(0, 4);
 
@@ -130,9 +134,6 @@ export default async function HomePage({
             }
           />
 
-          {/* Category tiles, unboxed: only the image is framed — a hairline that
-              warms to clay on hover — and the copy sits directly on the page
-              like a caption under a plate in a catalogue. */}
           {/* Two-up from the smallest screen, like every other product grid on
               this page. One-up until `sm` meant five full-width tiles stacked
               end to end — 3,400px, a third of the whole mobile page, for five
@@ -140,15 +141,26 @@ export default async function HomePage({
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-x-8 sm:gap-y-14 lg:grid-cols-4">
             {plantCategories.map((category, i) => {
               const sample = categorySamples.get(category.slug);
+              const cover = categoryCovers.get(category.slug);
               return (
                 <RevealSection key={category.id} delay={i * 0.08}>
                   <Link
                     href={`/category/${category.slug}`}
                     className="group block"
+                    title={tcd(category.key)}
                   >
-                    <div className="overflow-hidden rounded-lg border border-border-subtle transition-colors duration-500 ease-refined group-hover:border-clay-300">
-                      <div className="relative aspect-4/5 w-full">
-                        {sample ? (
+                    <div className="relative overflow-hidden rounded-lg border border-border-subtle transition-colors duration-500 ease-refined group-hover:border-clay-300">
+                      <div className="relative aspect-4/5 w-full bg-surface-sunken">
+                        {cover ? (
+                          <Image
+                            src={cover}
+                            alt=""
+                            aria-hidden="true"
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover transition-transform duration-[1100ms] ease-refined group-hover:scale-[1.04]"
+                          />
+                        ) : sample ? (
                           <PlantImage
                             product={sample}
                             sizes="(max-width: 768px) 50vw, 25vw"
@@ -156,34 +168,27 @@ export default async function HomePage({
                           />
                         ) : null}
                       </div>
-                    </div>
 
-                    <div className="mt-4 flex flex-col gap-1.5 sm:mt-5">
-                      <h3 className="font-display text-lg transition-colors duration-300 group-hover:text-clay-800 sm:text-xl">
-                        {tc(category.key)}
-                      </h3>
-                      {/* The blurb needs a line it can actually fill. At two-up
-                          on a phone the tile is ~170px wide, where two clamped
-                          lines are four words each and read as noise; the name
-                          and the link carry it there. */}
-                      <p className="hidden line-clamp-2 text-sm leading-relaxed text-text-secondary sm:block">
-                        {tcd(category.key)}
-                      </p>
-                      <span className="mt-2 inline-flex w-fit items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-clay-700">
-                        <span className="relative">
-                          {ta("seeAll")}
-                          {/* Underline that draws itself in — quieter than a
-                              colour change, more deliberate than an instant one. */}
-                          <span
-                            aria-hidden="true"
-                            className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-clay-500 transition-transform duration-500 ease-refined group-hover:scale-x-100"
-                          />
+                      {/* The name rides the image on a solid bar rather than
+                          sitting under the frame as a caption. It reads at
+                          two-up on a phone, where a caption below competes with
+                          the next row for which tile it belongs to — and it
+                          means a category with no artwork yet still shows a
+                          finished card instead of an empty box. */}
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-clay-700/95 px-3.5 py-2.5 text-ink-50 backdrop-blur-sm transition-colors duration-300 group-hover:bg-clay-800/95 sm:px-4 sm:py-3">
+                        {/* No truncation: "Garden & Balcony" clipped to
+                            "Garden & Bal…" at two-up, and a category whose name
+                            you cannot read is not a navigable card. It wraps to
+                            a second line instead on the one name long enough to
+                            need it. */}
+                        <span className="font-display text-[13.5px] leading-tight sm:text-base">
+                          {tc(category.key)}
                         </span>
-                        <ArrowUpRight
-                          className="size-3.5 transition-transform duration-300 ease-refined group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                        <ArrowRight
+                          className="size-4 shrink-0 transition-transform duration-300 ease-refined group-hover:translate-x-0.5"
                           aria-hidden="true"
                         />
-                      </span>
+                      </div>
                     </div>
                   </Link>
                 </RevealSection>
@@ -289,13 +294,13 @@ export default async function HomePage({
             }
           />
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+          <CardRail count={4}>
             {featured.slice(0, 4).map((item, i) => (
               <RevealSection key={item.id} delay={i * 0.07}>
                 <PlantCard product={item} priority={i < 2} />
               </RevealSection>
             ))}
-          </div>
+          </CardRail>
         </div>
       </section>
 
@@ -379,13 +384,13 @@ export default async function HomePage({
             }
           />
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+          <CardRail count={petSafe.length}>
             {petSafe.map((item, i) => (
               <RevealSection key={item.id} delay={i * 0.07}>
                 <PlantCard product={item} />
               </RevealSection>
             ))}
-          </div>
+          </CardRail>
         </div>
       </section>
 

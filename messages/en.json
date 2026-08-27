@@ -44,7 +44,9 @@
     "increase": "Increase quantity",
     "decrease": "Decrease quantity",
     "itemsInCart": "{count, plural, =0 {Cart is empty} one {# item in cart} other {# items in cart}}",
-    "backToShop": "Back to shop"
+    "backToShop": "Back to shop",
+    "previous": "Previous",
+    "next": "Next"
   },
   "home": {
     "heroEyebrow": "Delivered across Peninsular Malaysia",

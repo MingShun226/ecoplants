@@ -277,6 +277,29 @@ export function getCategory(slug: string): Category | undefined {
 }
 
 /**
+ * Cover images, keyed by slug.
+ *
+ * The list above is structure and stays in code — slugs are baked into routes
+ * and message keys. The artwork is content, so it lives in `categories.
+ * image_path` where the admin can change it without a deploy. This is the join
+ * between the two, and until it existed the admin's category uploads went into
+ * the bucket and were never read by anything.
+ *
+ * A category with no image is simply absent from the map; callers fall back.
+ */
+async function fetchCategoryImages(): Promise<ReadonlyMap<string, string>> {
+  const supabase = createPublicClient();
+  const { data } = await supabase.from("categories").select("slug, image_path");
+
+  const rows = (data ?? []) as { slug: string; image_path: string | null }[];
+  return new Map(
+    rows.filter((r) => r.image_path).map((r) => [r.slug, imageUrl(r.image_path as string)]),
+  );
+}
+
+export const getCategoryImages = cache(fetchCategoryImages);
+
+/**
  * `pet-safe` and `beginner` are attribute-derived collections rather than
  * stored memberships — `categories.is_derived` marks them in the database for
  * the same reason.

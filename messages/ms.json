@@ -44,7 +44,9 @@
     "increase": "Tambah kuantiti",
     "decrease": "Kurangkan kuantiti",
     "itemsInCart": "{count, plural, =0 {Troli kosong} other {# item dalam troli}}",
-    "backToShop": "Kembali ke kedai"
+    "backToShop": "Kembali ke kedai",
+    "previous": "Sebelumnya",
+    "next": "Seterusnya"
   },
   "home": {
     "heroEyebrow": "Dihantar ke seluruh Semenanjung Malaysia",

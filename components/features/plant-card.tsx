@@ -64,38 +64,42 @@ export function PlantCard({
             />
           </div>
 
-          {/* Both badges share one row rather than being pinned to opposite
-              corners independently. Two absolutes at `left` and `right` overlap
-              the moment the card is narrower than the sum of their labels —
-              which is every two-up grid on a phone, where "LOW LIGHT" and
-              "PET-SAFE" collided. Here they wrap instead, and the corner split
-              comes back once the card is wide enough to hold both on one line. */}
-          <div className="pointer-events-none absolute inset-x-3.5 top-3.5 flex flex-wrap items-start gap-1.5 *:whitespace-nowrap @[15rem]:flex-nowrap">
-            {soldOut ? (
-              <span className="rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
-                {ta("soldOut")}
-              </span>
-            ) : product.isNew ? (
-              /* New outranks a badge: it is the reason to look now, and it is the
-                 one label that stops being true on its own. */
-              <span className="rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
-                {tb("newArrival")}
-              </span>
-            ) : product.badges[0] ? (
-              <span className="rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
-                {tb(product.badges[0])}
-              </span>
-            ) : null}
+          {/* One pill, bottom-left, never two. Badges pinned to opposite top
+              corners overlapped as soon as the card was narrower than the sum
+              of their labels — every two-up grid on a phone. Wrapping them was
+              a patch; carrying a single label is the fix, and it reads at a
+              glance the way a shelf tag does.
 
-            {/* `ml-auto` only once the split is back on: alone on a narrow card
-                it should sit with the others at the left, not stranded right. */}
-            {product.attributes.petSafe === true ? (
-              <PetSafetyBadge
-                petSafe
-                className="bg-canvas/90 backdrop-blur-sm @[15rem]:ml-auto"
-              />
-            ) : null}
-          </div>
+              The order is a priority, not a preference: sold out overrides
+              everything because it changes whether you can buy at all, then
+              new, which is the reason to look now and the one label that stops
+              being true on its own, then the plant's own badge. Pet safety is
+              not in this stack — it is a fact about the plant rather than a
+              status, and it sits with the care line below. */}
+          {soldOut ? (
+            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full bg-ink-950/85 px-3 py-1 text-[10px] font-medium uppercase tracking-widest text-ink-50 backdrop-blur-sm">
+              {ta("soldOut")}
+            </span>
+          ) : product.isNew ? (
+            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full bg-leaf-800 px-2.5 py-1 text-[10px] uppercase tracking-widest text-ink-50">
+              {tb("newArrival")}
+            </span>
+          ) : product.badges[0] ? (
+            <span className="pointer-events-none absolute bottom-3.5 left-3.5 rounded-full border border-clay-300/80 bg-canvas/90 px-2.5 py-1 text-[10px] uppercase tracking-widest text-clay-800 backdrop-blur-sm">
+              {tb(product.badges[0])}
+            </span>
+          ) : null}
+
+          {/* Top-right, diagonally opposite the status pill. The two used to
+              share the top edge and collided on any narrow card; separating
+              them by corner means they cannot meet at any width, which beats
+              wrapping them and beats moving this one below the image, where it
+              pushed the name and price out of line with the cards beside it. */}
+          {product.attributes.petSafe === true ? (
+            <span className="pointer-events-none absolute right-3.5 top-3.5">
+              <PetSafetyBadge petSafe className="bg-canvas/90 backdrop-blur-sm" />
+            </span>
+          ) : null}
 
           {/* Rising arrow chip — the whole card is already the link. */}
           <span

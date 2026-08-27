@@ -32,16 +32,26 @@ export function CareLine({
   return (
     <span
       className={cn(
-        "flex items-center gap-2 text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary",
+        // `flex-wrap` and `min-w-0` are load-bearing, not tidiness. Tracked
+        // uppercase runs wide, and in the home page's dense ledger row this
+        // line could not fit beside the price — without them it overflowed its
+        // column and printed straight through the amount.
+        "flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] uppercase tracking-[0.16em] text-text-tertiary",
         className,
       )}
     >
-      <LightIcon level={attributes.light} className="size-3.5" />
-      {t(lightKeys[attributes.light])}
-      <span aria-hidden="true" className="text-border-strong">
-        ·
+      {/* Two wrap units, not five loose ones. Left bare, the separator counts as
+          its own item and can start a line by itself, and a two-word label can
+          break across lines — "BRIGHT / INDIRECT / · / WATER WEEKLY". Grouping
+          keeps the dot married to the label before it. */}
+      <span className="flex items-center gap-2 whitespace-nowrap">
+        <LightIcon level={attributes.light} className="size-3.5" />
+        {t(lightKeys[attributes.light])}
+        <span aria-hidden="true" className="text-border-strong">
+          ·
+        </span>
       </span>
-      {t(waterKeys[attributes.water])}
+      <span className="whitespace-nowrap">{t(waterKeys[attributes.water])}</span>
     </span>
   );
 }

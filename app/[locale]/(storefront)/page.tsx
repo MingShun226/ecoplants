@@ -133,7 +133,11 @@ export default async function HomePage({
           {/* Category tiles, unboxed: only the image is framed — a hairline that
               warms to clay on hover — and the copy sits directly on the page
               like a caption under a plate in a catalogue. */}
-          <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Two-up from the smallest screen, like every other product grid on
+              this page. One-up until `sm` meant five full-width tiles stacked
+              end to end — 3,400px, a third of the whole mobile page, for five
+              links. */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-x-8 sm:gap-y-14 lg:grid-cols-4">
             {plantCategories.map((category, i) => {
               const sample = categorySamples.get(category.slug);
               return (
@@ -154,11 +158,15 @@ export default async function HomePage({
                       </div>
                     </div>
 
-                    <div className="mt-5 flex flex-col gap-1.5">
-                      <h3 className="font-display text-xl transition-colors duration-300 group-hover:text-clay-800">
+                    <div className="mt-4 flex flex-col gap-1.5 sm:mt-5">
+                      <h3 className="font-display text-lg transition-colors duration-300 group-hover:text-clay-800 sm:text-xl">
                         {tc(category.key)}
                       </h3>
-                      <p className="line-clamp-2 text-sm leading-relaxed text-text-secondary">
+                      {/* The blurb needs a line it can actually fill. At two-up
+                          on a phone the tile is ~170px wide, where two clamped
+                          lines are four words each and read as noise; the name
+                          and the link carry it there. */}
+                      <p className="hidden line-clamp-2 text-sm leading-relaxed text-text-secondary sm:block">
                         {tcd(category.key)}
                       </p>
                       <span className="mt-2 inline-flex w-fit items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-clay-700">
@@ -241,7 +249,12 @@ export default async function HomePage({
                       <span className="truncate text-[14.5px] transition-colors duration-300 group-hover:text-clay-800">
                         {item.t[activeLocale].name}
                       </span>
-                      <CareLine attributes={item.attributes} />
+                      {/* This row is the dense one — thumbnail, name, price.
+                          On a phone there is not enough width left for care
+                          detail without it wrapping into a three-line block
+                          that defeats the point of a ledger. It is on the card
+                          and the product page, where there is room for it. */}
+                      <CareLine attributes={item.attributes} className="hidden sm:flex" />
                     </span>
                     <span className="flex shrink-0 items-center gap-3">
                       <span className="numeric text-[14.5px] font-medium">

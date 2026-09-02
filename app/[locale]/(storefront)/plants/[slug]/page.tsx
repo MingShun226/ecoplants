@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { DisplayHeading } from "@/components/brand/display-heading";
-import { PlantImage } from "@/components/brand/plant-image";
 import { LeafRule } from "@/components/brand/primitives";
 import { BuyBox } from "@/components/features/buy-box";
+import { ProductGallery } from "@/components/features/product-gallery";
+import { VariantProvider } from "@/components/features/variant-provider";
 import { CareGrid, DifficultyMeter, LightIcon, PetSafetyBadge } from "@/components/features/care";
 import { PlantCard } from "@/components/features/plant-card";
 import { RevealSection } from "@/components/features/reveal-section";
@@ -140,17 +141,14 @@ export default async function ProductPage({
           </ol>
         </nav>
 
+        {/* The gallery and the buy box share one selected variant, so choosing
+            a size changes the photograph as well as the price. The provider
+            has to wrap both columns of the grid for that to be possible. */}
+        <VariantProvider product={product}>
         <div className="mt-8 grid gap-12 lg:grid-cols-2 lg:gap-20">
           {/* Frameless plate — no border to fight the photography. */}
           <div className="lg:sticky lg:top-32 lg:self-start">
-            <div className="relative aspect-4/5 w-full overflow-hidden rounded-xl bg-surface-sunken">
-              <PlantImage product={product} priority sizes="(max-width: 1024px) 100vw, 45vw" />
-              {product.images.length === 0 ? (
-                <p className="absolute bottom-3.5 left-3.5 rounded-full bg-canvas/90 px-3 py-1.5 text-[11px] text-text-tertiary backdrop-blur-sm">
-                  {t("illustrationNote")}
-                </p>
-              ) : null}
-            </div>
+            <ProductGallery product={product} alt={tr.name} />
           </div>
 
           <div>
@@ -205,6 +203,7 @@ export default async function ProductPage({
             <BuyBox product={product} />
           </div>
         </div>
+        </VariantProvider>
       </div>
 
       {/* Care detail — the section generic ecommerce PDPs are missing. */}

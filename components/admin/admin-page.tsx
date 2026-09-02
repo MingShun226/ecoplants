@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,6 +46,8 @@ export function AdminCard({
   lead,
   actions,
   flush = false,
+  collapsible = false,
+  defaultOpen = false,
   className,
   children,
 }: {
@@ -53,26 +56,62 @@ export function AdminCard({
   actions?: React.ReactNode;
   /** No body padding — tables and lists run edge to edge. */
   flush?: boolean;
+  /**
+   * Folds the body away behind its own header.
+   *
+   * For the settings on a screen that are configured once and then left alone.
+   * A long page of equally-weighted cards reads as a long list of chores even
+   * when most of them are already done, so the ones that are not routine work
+   * collapse and let the ones that are stay open.
+   *
+   * Built on `<details>` rather than state, so this stays a server component
+   * and folds correctly before any JavaScript arrives.
+   */
+  collapsible?: boolean;
+  defaultOpen?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
+  const shell = cn(
+    "overflow-hidden rounded-xl border border-border-subtle bg-surface",
+    className,
+  );
+  const body = <div className={flush ? "" : "px-5 py-4"}>{children}</div>;
+
+  const heading = (
+    <div className="min-w-0">
+      {title ? <h2 className="text-[14px] font-medium tracking-tight">{title}</h2> : null}
+      {lead ? <p className="mt-0.5 text-xs text-text-tertiary">{lead}</p> : null}
+    </div>
+  );
+
+  if (collapsible) {
+    return (
+      <details open={defaultOpen} className={cn(shell, "group/card")}>
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-sunken [&::-webkit-details-marker]:hidden">
+          {heading}
+          <span className="flex shrink-0 items-center gap-2">
+            {actions}
+            <ChevronDown
+              className="size-4 text-text-tertiary transition-transform group-open/card:rotate-180"
+              aria-hidden="true"
+            />
+          </span>
+        </summary>
+        <div className="border-t border-border-subtle">{body}</div>
+      </details>
+    );
+  }
+
   return (
-    <section
-      className={cn(
-        "overflow-hidden rounded-xl border border-border-subtle bg-surface",
-        className,
-      )}
-    >
+    <section className={shell}>
       {title || actions ? (
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border-subtle px-5 py-3.5">
-          <div className="min-w-0">
-            {title ? <h2 className="text-[14px] font-medium tracking-tight">{title}</h2> : null}
-            {lead ? <p className="mt-0.5 text-xs text-text-tertiary">{lead}</p> : null}
-          </div>
+          {heading}
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
         </div>
       ) : null}
-      <div className={flush ? "" : "px-5 py-4"}>{children}</div>
+      {body}
     </section>
   );
 }

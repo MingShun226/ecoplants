@@ -14,6 +14,7 @@ import { NewArrivalControl } from "@/components/admin/misc-forms";
 import { VariantEditor } from "@/components/admin/variant-editor";
 import { getProduct, listCategories } from "@/lib/admin/catalogue";
 import { formatSen } from "@/lib/admin/format";
+import { MAX_IMAGES_PER_PRODUCT } from "@/lib/admin/enums";
 
 export async function generateMetadata({
   params,
@@ -74,16 +75,22 @@ export default async function ProductDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-6">
-          <AdminCard
-            title="Copy"
-            lead="English is the source. Malay and Chinese fall back to it where they are missing."
-          >
-            <TranslationEditor product={product} />
-          </AdminCard>
-
+          {/* Photography first. It is the one thing on this screen a shopper
+              actually sees, and the only field whose absence changes what the
+              storefront draws. Everything below it is already filled in for
+              every plant we stock; this is usually empty. */}
           <AdminCard
             title="Photos"
-            lead="The primary photo is the card image. Without one the shop draws generated artwork instead."
+            lead={
+              product.images.length === 0
+                ? "None yet — the shop is drawing generated artwork for this plant."
+                : "The cover is the card image. Photos can be tied to one size."
+            }
+            actions={
+              <span className="numeric text-[11px] text-text-tertiary">
+                {product.images.length} of {MAX_IMAGES_PER_PRODUCT}
+              </span>
+            }
           >
             <ImageManager
               productId={product.id}
@@ -92,6 +99,13 @@ export default async function ProductDetailPage({
               images={product.images}
               variants={product.variants}
             />
+          </AdminCard>
+
+          <AdminCard
+            title="Copy"
+            lead="English is the source. Malay and Chinese fall back to it where they are missing."
+          >
+            <TranslationEditor product={product} />
           </AdminCard>
 
           <AdminCard title="Variants, prices and stock" flush>
@@ -114,29 +128,19 @@ export default async function ProductDetailPage({
             </p>
           </AdminCard>
 
+          {/* Set once when the plant is first listed, then left alone for
+              years. Folded so the screen reads as "add photos" rather than as
+              a form with four unfinished sections. */}
           <AdminCard
             title="Care attributes"
-            lead="These drive the filters, the quiz and the care panel on the product page."
+            lead="Drives the filters, the quiz and the care panel. Already set for this plant."
+            collapsible
           >
             <AttributesForm productId={product.id} attributes={product.attributes} />
           </AdminCard>
         </div>
 
         <div className="flex flex-col gap-6">
-          <AdminCard
-            title="Classification"
-            lead="What this plant is and where it sits in the shop. Not translated."
-          >
-            <ProductFactsForm product={product} categories={categories} />
-          </AdminCard>
-
-          <AdminCard
-            title="New arrival"
-            lead="Puts this on the New arrivals page and badges its card."
-          >
-            <NewArrivalControl productId={product.id} daysLeft={product.newArrivalDaysLeft} />
-          </AdminCard>
-
           <AdminCard title="At a glance">
             <dl className="flex flex-col gap-4">
               <AdminField label="In stock">
@@ -145,6 +149,11 @@ export default async function ProductDetailPage({
               <AdminField label="Price from">
                 <span className="numeric">
                   {product.priceFromSen === null ? "—" : formatSen(product.priceFromSen)}
+                </span>
+              </AdminField>
+              <AdminField label="Photos">
+                <span className={product.images.length === 0 ? "text-text-tertiary" : "numeric"}>
+                  {product.images.length === 0 ? "None yet" : product.images.length}
                 </span>
               </AdminField>
               <AdminField label="Reviews">
@@ -162,6 +171,26 @@ export default async function ProductDetailPage({
                 )}
               </AdminField>
             </dl>
+          </AdminCard>
+
+          <AdminCard
+            title="New arrival"
+            lead={
+              product.newArrivalDaysLeft === null
+                ? "Not listed as new."
+                : `${product.newArrivalDaysLeft} days left.`
+            }
+            collapsible
+          >
+            <NewArrivalControl productId={product.id} daysLeft={product.newArrivalDaysLeft} />
+          </AdminCard>
+
+          <AdminCard
+            title="Classification"
+            lead="Botanical name, category and badges. Not translated."
+            collapsible
+          >
+            <ProductFactsForm product={product} categories={categories} />
           </AdminCard>
         </div>
       </div>

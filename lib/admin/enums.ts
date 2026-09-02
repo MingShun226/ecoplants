@@ -63,3 +63,16 @@ export const BADGE_KEYS = [
   "native",
   "easy",
 ] as const;
+
+/**
+ * Photos per product.
+ *
+ * Nine is a limit on the shopper's patience rather than on storage. Past about
+ * that a gallery stops being browsed and starts being scrolled past, and every
+ * extra shot is another image a phone fetches before the page settles.
+ *
+ * Lives here rather than beside the upload action because a `"use server"`
+ * module may only export async functions — a constant exported from one is a
+ * build error, not a lint warning.
+ */
+export const MAX_IMAGES_PER_PRODUCT = 9;

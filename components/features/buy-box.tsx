@@ -2,8 +2,9 @@
 
 import { ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { openCartDrawer, useCart } from "@/components/features/cart-provider";
+import { useSelectedVariant } from "@/components/features/variant-provider";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/i18n/routing";
 import { useShopSettings } from "@/components/features/settings-provider";
@@ -30,14 +31,9 @@ export function BuyBox({ product }: { product: Product }) {
   const locale = useLocale() as Locale;
   const { add } = useCart();
 
-  const firstAvailable = product.variants.find((v) => v.quantityOnHand > 0) ?? product.variants[0];
-  const [variantId, setVariantId] = useState(firstAvailable.id);
+  // Shared with the gallery, so choosing a size changes the photograph too.
+  const { variant, select: setVariantId } = useSelectedVariant();
   const [added, setAdded] = useState(false);
-
-  const variant = useMemo(
-    () => product.variants.find((v) => v.id === variantId) ?? firstAvailable,
-    [product.variants, variantId, firstAvailable],
-  );
 
   const soldOut = variant.quantityOnHand === 0;
   const lowStock = variant.quantityOnHand > 0 && variant.quantityOnHand <= 5;

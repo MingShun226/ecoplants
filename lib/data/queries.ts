@@ -73,6 +73,8 @@ interface ProductRow {
     inventory: { quantity_on_hand: number; reserved: number } | null;
   }[];
   product_images: {
+    id: string;
+    variant_id: string | null;
     storage_path: string;
     kind: ProductImage["kind"];
     position: number;
@@ -106,7 +108,13 @@ function toImage(
     row.product_image_translations[0]?.alt ??
     fallbackAlt;
 
-  return { src: imageUrl(row.storage_path), alt, kind: row.kind };
+  return {
+    id: row.id,
+    src: imageUrl(row.storage_path),
+    alt,
+    kind: row.kind,
+    variantId: row.variant_id,
+  };
 }
 
 /**
@@ -125,7 +133,7 @@ const PRODUCT_SELECT = `
   product_translations ( locale, name, slug, tagline, description, care_summary, climate_note, toxicity_note ),
   plant_attributes ( light, water, pet_safe, difficulty, mature_height_cm, placement, air_purifying ),
   product_variants ( id, sku, size_key, pot_color_key, pot_material_key, price_sen, compare_at_sen, weight_grams, height_cm, pot_diameter_cm, position, inventory ( quantity_on_hand, reserved ) ),
-  product_images ( storage_path, kind, position, is_primary, product_image_translations ( locale, alt ) )
+  product_images ( id, variant_id, storage_path, kind, position, is_primary, product_image_translations ( locale, alt ) )
 `;
 
 function toTranslation(row: ProductRow["product_translations"][number]): ProductTranslation {

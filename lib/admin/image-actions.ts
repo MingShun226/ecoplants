@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { MAX_IMAGES_PER_PRODUCT } from "@/lib/admin/enums";
 import { getSessionAdmin } from "@/lib/admin/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/admin/actions";
@@ -25,6 +26,7 @@ const BUCKET = "product-images";
 /** Matches the bucket's own limits, so a bad file is refused before upload. */
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+
 
 export type ImageKind = "catalog" | "lifestyle" | "detail" | "scale";
 
@@ -57,6 +59,20 @@ export async function uploadProductImage(form: FormData): Promise<ActionResult> 
   }
 
   const supabase = await createClient();
+
+  // Counted before the bytes are sent anywhere, so a refused upload leaves
+  // nothing behind in the bucket to clean up.
+  const { count } = await supabase
+    .from("product_images")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", productId);
+
+  if ((count ?? 0) >= MAX_IMAGES_PER_PRODUCT) {
+    return {
+      ok: false,
+      error: `This product already has ${MAX_IMAGES_PER_PRODUCT} photos. Delete one before adding another.`,
+    };
+  }
 
   // Grouped by product ref so the bucket stays legible in the dashboard, and
   // suffixed randomly so re-uploading the same filename never collides or

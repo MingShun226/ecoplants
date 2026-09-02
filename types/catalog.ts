@@ -68,9 +68,20 @@ export interface Variant {
 }
 
 export interface ProductImage {
+  id: string;
   src: string;
   alt: string;
   kind: "catalog" | "lifestyle" | "detail" | "scale";
+  /**
+   * The variant this photo is of, or null for one that suits every size.
+   *
+   * A shop that sells the same plant in a 12cm and a 20cm pot is selling two
+   * different-looking objects, and a photo of one is a misdescription of the
+   * other. Null is the honest default — most shots are of the plant rather
+   * than of a particular pot — so the gallery shows the shared set until a
+   * variant has photography of its own.
+   */
+  variantId: string | null;
 }
 
 /** product_translations — one row per (product, locale) */

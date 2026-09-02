@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { AdminCard, AdminField, AdminPage } from "@/components/admin/admin-page";
 import {
   AttributesForm,
+  DeleteProduct,
   ProductFactsForm,
   TranslationEditor,
   VisibilityToggle,
@@ -137,6 +138,14 @@ export default async function ProductDetailPage({
             collapsible
           >
             <AttributesForm productId={product.id} attributes={product.attributes} />
+          </AdminCard>
+
+          <AdminCard title="Remove" collapsible>
+            <DeleteProduct
+              productId={product.id}
+              productName={product.name}
+              isActive={product.isActive}
+            />
           </AdminCard>
         </div>
 

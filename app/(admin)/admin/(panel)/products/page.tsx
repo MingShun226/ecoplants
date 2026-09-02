@@ -1,4 +1,4 @@
-import { ArrowUpRight, Search, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, Plus, Search, TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminCard, AdminPage } from "@/components/admin/admin-page";
@@ -43,6 +43,15 @@ export default async function ProductsPage({
     <AdminPage
       title="Products"
       lead="What the shop sells. Prices and copy live on each product; stock lives in Inventory."
+      actions={
+        <Link
+          href={adminHref("/admin/products/new")}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-ink-950 px-3.5 text-[13px] text-ink-50 transition-opacity hover:opacity-90"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          New plant
+        </Link>
+      }
     >
       <div className="flex flex-wrap items-center gap-2">
         {VIEWS.map((v) => (

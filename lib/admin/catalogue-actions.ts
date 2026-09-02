@@ -503,3 +503,262 @@ export async function removeCategoryImage(categoryId: string): Promise<ActionRes
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// -------------------------------------------------------- create & delete --
+
+/** Mirrors the database's own slug check, so a bad value is refused with a sentence. */
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+export interface NewProductInput {
+  ref: string;
+  nameBotanical: string;
+  categoryId: string;
+  name: string;
+  slug: string;
+  sizeKey: string;
+  sku: string;
+  priceSen: number;
+  quantityOnHand: number;
+}
+
+/**
+ * Add a product.
+ *
+ * It arrives hidden, always. A plant needs photographs, three translations,
+ * care attributes and a price before it is fit to sell, and none of that can be
+ * true at the instant the row is created — so publishing stays a separate,
+ * deliberate act on the detail page rather than a side effect of typing a name.
+ *
+ * Only the fields with no sensible default are asked for. Malay and Chinese
+ * copy, the care attributes, badges and further sizes are all edited afterwards
+ * on a screen built for it. A create form that asks for everything is a form
+ * nobody finishes.
+ *
+ * PostgREST has no multi-table transaction, so these inserts run in dependency
+ * order and the product is rolled back by hand if a later one fails. A
+ * half-made product is worse than none: invisible in the shop, but holding its
+ * ref, so the next attempt collides with something nobody can see.
+ */
+export async function createProduct(
+  input: NewProductInput,
+): Promise<{ ok: true; ref: string } | { ok: false; error: string }> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const ref = slugify(input.ref || input.name);
+  const slug = slugify(input.slug || input.name);
+  const name = input.name.trim();
+  const sku = input.sku.trim().toUpperCase();
+
+  if (!name) return { ok: false, error: "Give it a name." };
+  if (!SLUG.test(ref)) {
+    return { ok: false, error: "The reference needs to be lowercase letters, numbers and hyphens." };
+  }
+  if (!SLUG.test(slug)) {
+    return { ok: false, error: "The web address needs to be lowercase letters, numbers and hyphens." };
+  }
+  if (!input.categoryId) return { ok: false, error: "Choose a category." };
+  if (!sku) return { ok: false, error: "Give the size a SKU." };
+  if (!Number.isInteger(input.priceSen) || input.priceSen <= 0) {
+    return { ok: false, error: "Give it a price above zero." };
+  }
+  if (!Number.isInteger(input.quantityOnHand) || input.quantityOnHand < 0) {
+    return { ok: false, error: "Stock cannot be negative." };
+  }
+
+  const supabase = await createClient();
+
+  // Membership of a derived category follows from the plant's own facts —
+  // `new_until` for New arrivals, the care attributes for Pet-safe and
+  // Beginner. Filing a product into one directly puts it somewhere no shopper
+  // browses, and it would then be missing from the category it belongs in.
+  const { data: category } = await supabase
+    .from("categories")
+    .select("is_derived")
+    .eq("id", input.categoryId)
+    .maybeSingle();
+
+  if (!category) return { ok: false, error: "That category no longer exists." };
+  if ((category as { is_derived: boolean }).is_derived) {
+    return { ok: false, error: "That category fills itself from the plants in it. Pick another." };
+  }
+
+  const { data: created, error: productError } = await supabase
+    .from("products")
+    .insert({
+      ref,
+      name_botanical: input.nameBotanical.trim() || name,
+      category_id: input.categoryId,
+      is_active: false,
+    })
+    .select("id, ref")
+    .single();
+
+  if (productError) {
+    return {
+      ok: false,
+      error: /duplicate|unique/i.test(productError.message)
+        ? `Something already uses the reference "${ref}".`
+        : productError.message,
+    };
+  }
+
+  const product = created as { id: string; ref: string };
+
+  /** Undo the product row, so a failed create leaves no ref behind. */
+  const rollback = async (error: string) => {
+    await supabase.from("products").delete().eq("id", product.id);
+    return { ok: false as const, error };
+  };
+
+  // English only. It is the source locale the storefront falls back to, so a
+  // product with just this row renders correctly in all three languages.
+  const translation = await supabase.from("product_translations").insert({
+    product_id: product.id,
+    locale: "en",
+    name,
+    slug,
+  });
+  if (translation.error) {
+    return rollback(
+      /duplicate|unique/i.test(translation.error.message)
+        ? `Another plant already lives at /plants/${slug}.`
+        : translation.error.message,
+    );
+  }
+
+  // Middle-of-the-road care, so the filters and the quiz have something to work
+  // with before anyone opens the attributes panel. Pet safety stays null —
+  // "not verified", which the storefront never renders as safe.
+  const attributes = await supabase.from("plant_attributes").insert({
+    product_id: product.id,
+    light: "bright-indirect",
+    water: "when-dry",
+    pet_safe: null,
+    difficulty: "easy",
+    mature_height_cm: 60,
+    placement: "indoor",
+  });
+  if (attributes.error) return rollback(attributes.error.message);
+
+  const { data: variantRow, error: variantError } = await supabase
+    .from("product_variants")
+    .insert({
+      product_id: product.id,
+      sku,
+      size_key: input.sizeKey,
+      pot_color_key: "charcoal",
+      pot_material_key: "ceramic",
+      price_sen: input.priceSen,
+      weight_grams: 1500,
+      height_cm: 40,
+      pot_diameter_cm: 14,
+      position: 0,
+    })
+    .select("id")
+    .single();
+
+  if (variantError) {
+    return rollback(
+      /duplicate|unique/i.test(variantError.message)
+        ? `The SKU ${sku} is already in use.`
+        : variantError.message,
+    );
+  }
+
+  // The inventory row is created by a trigger (migration 0031), at zero.
+  // Opening stock is then an ordinary movement, so the first plants to arrive
+  // appear in the audit trail exactly like every delivery after them — rather
+  // than the count starting at a number nobody can account for.
+  const variantId = (variantRow as { id: string }).id;
+  if (input.quantityOnHand > 0) {
+    const { error: stockError } = await supabase.rpc("adjust_stock", {
+      p_variant_id: variantId,
+      p_delta: input.quantityOnHand,
+      p_reason: "received",
+      p_note: "Opening stock",
+    });
+    if (stockError) return rollback(clean(stockError.message));
+  }
+
+  revalidatePath("/admin/products", "layout");
+  revalidatePath("/", "layout");
+  return { ok: true, ref: product.ref };
+}
+
+/**
+ * Delete a product outright — but only one that has never been sold.
+ *
+ * Everything belonging to a product cascades away with it, including its
+ * `stock_movements`, which is the account of what was received, damaged and
+ * died. For a plant nobody ever bought, that history is worth nothing. For one
+ * that appears on somebody's order it is the only record of stock that money
+ * changed hands over, and no panel button should be able to erase it.
+ *
+ * So a sold product is refused and pointed at "Hide from shop", which takes it
+ * off the storefront and leaves the record intact. That is what an archive is
+ * for, and it already exists.
+ *
+ * Storage does not cascade. The image rows go with the product, so their files
+ * are removed first — after the rows are gone nothing names them, and they
+ * become litter no one can find.
+ */
+export async function deleteProduct(productId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+
+  const { data: variants } = await supabase
+    .from("product_variants")
+    .select("id")
+    .eq("product_id", productId);
+
+  const variantIds = ((variants ?? []) as { id: string }[]).map((v) => v.id);
+
+  if (variantIds.length > 0) {
+    const { count, error } = await supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .in("variant_id", variantIds);
+
+    if (error) return { ok: false, error: error.message };
+    if ((count ?? 0) > 0) {
+      return {
+        ok: false,
+        error:
+          `This plant is on ${count} order line${count === 1 ? "" : "s"}, so deleting it would take ` +
+          `the stock history with it. Hide it from the shop instead — it leaves the catalogue and ` +
+          `the record survives.`,
+      };
+    }
+  }
+
+  // Bytes first, while the rows that name them still exist.
+  const { data: images } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", productId);
+
+  const paths = ((images ?? []) as { storage_path: string }[]).map((i) => i.storage_path);
+  if (paths.length > 0) {
+    await supabase.storage.from("product-images").remove(paths);
+  }
+
+  const { error } = await supabase.from("products").delete().eq("id", productId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/products", "layout");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

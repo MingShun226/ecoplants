@@ -123,6 +123,8 @@
     "sortRating": "Best rated",
     "emptyTitle": "Nothing matches all of those filters",
     "emptyBody": "Try removing one — light and pet-safety together narrow things down fast. Or let us pick for you.",
+    "bareTitle": "Nothing here yet",
+    "bareBody": "We are still settling this shelf in. New plants land here as soon as they are ready to travel.",
     "deliveryNoteLabel": "Delivery note."
   },
   "facets": {

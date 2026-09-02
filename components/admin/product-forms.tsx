@@ -4,6 +4,7 @@ import { Check, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  deleteProduct,
   setProductActive,
   updateAttributes,
   updateProductFacts,
@@ -617,3 +618,112 @@ function Choice({
 }
 
 // --------------------------------------------------------------- variants --
+
+// ----------------------------------------------------------------- delete --
+
+/**
+ * Deleting a plant.
+ *
+ * Confirmation is by typing the name, not by clicking twice. Two clicks in the
+ * same spot is not a decision — the second one is muscle memory finishing what
+ * the first started. Copying out a name is the only cheap confirmation that
+ * cannot be performed by accident.
+ *
+ * The action itself refuses any plant that appears on an order, so the worst
+ * this button can do is remove something nobody ever bought.
+ */
+export function DeleteProduct({
+  productId,
+  productName,
+  isActive,
+}: {
+  productId: string;
+  productName: string;
+  isActive: boolean;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const matches = typed.trim().toLowerCase() === productName.trim().toLowerCase();
+
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12px] leading-relaxed text-text-tertiary">
+          Removes the plant, its copy, sizes, stock and photographs for good. A plant that
+          has ever been ordered cannot be deleted — hide it instead.
+        </p>
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+          Delete this plant
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {isActive ? (
+        <p className="rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-[12px] leading-relaxed">
+          This plant is live in the shop right now.
+        </p>
+      ) : null}
+
+      <Label htmlFor="confirm-delete" className="text-[12px] font-normal leading-relaxed">
+        Type <strong className="font-medium">{productName}</strong> to confirm.
+      </Label>
+      <Input
+        id="confirm-delete"
+        value={typed}
+        onChange={(e) => setTyped(e.target.value)}
+        autoComplete="off"
+        autoFocus
+        className="h-8 max-w-sm rounded-sm text-[13px]"
+      />
+
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-[13px] leading-relaxed"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="destructive"
+          disabled={pending || !matches}
+          onClick={() => {
+            setError(null);
+            start(async () => {
+              const result = await deleteProduct(productId);
+              if (result.ok) {
+                router.push("/admin/products");
+              } else {
+                setError(result.error);
+              }
+            });
+          }}
+        >
+          {pending ? "Deleting…" : "Delete for good"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={pending}
+          onClick={() => {
+            setOpen(false);
+            setTyped("");
+            setError(null);
+          }}
+        >
+          Keep it
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -83,14 +83,24 @@ export function CategoryResults({
       {results.length > 0 ? (
         <PlantGrid products={results} className="mt-12" />
       ) : (
+        /* Two different nothings. "Try removing a filter" is good advice when a
+           filter is what excluded everything, and nonsense when the shop simply
+           has nothing here yet — and it is the second case a visitor hits on a
+           category that has not been stocked. Offering the quiz alongside it
+           would be worse still: no filter can conjure a plant that is not
+           there. */
         <div className="mt-12 rounded-xl border border-dashed border-border-default bg-surface-sunken px-6 py-20 text-center">
-          <h2 className="font-display text-xl">{t("emptyTitle")}</h2>
+          <h2 className="font-display text-xl">
+            {products.length === 0 ? t("bareTitle") : t("emptyTitle")}
+          </h2>
           <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-text-secondary">
-            {t("emptyBody")}
+            {products.length === 0 ? t("bareBody") : t("emptyBody")}
           </p>
-          <Button asChild className="mt-7 px-6">
-            <Link href="/quiz">{ta("takeQuiz")}</Link>
-          </Button>
+          {products.length > 0 ? (
+            <Button asChild className="mt-7 px-6">
+              <Link href="/quiz">{ta("takeQuiz")}</Link>
+            </Button>
+          ) : null}
         </div>
       )}
 

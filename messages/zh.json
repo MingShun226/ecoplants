@@ -123,6 +123,8 @@
     "sortRating": "评价最佳",
     "emptyTitle": "没有植物同时符合这些条件",
     "emptyBody": "试着移除一项——光线加上宠物安全会让选项迅速变少。或者让我们替你挑。",
+    "bareTitle": "这里还没有植物",
+    "bareBody": "这一区还在筹备中。新植物一旦适合运送，就会出现在这里。",
     "deliveryNoteLabel": "配送说明。"
   },
   "facets": {

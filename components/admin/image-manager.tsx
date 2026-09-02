@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronDown, ImagePlus, Star, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ImagePlus, Star, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
   deleteProductImage,
+  moveProductImage,
   setPrimaryImage,
   updateImageMeta,
   uploadProductImage,
@@ -47,6 +48,64 @@ const KINDS: { value: ImageKind; label: string }[] = [
 
 const ALL_VARIANTS = "__all__";
 
+/**
+ * Shrink a photo in the browser before it is uploaded.
+ *
+ * A photo off a phone is routinely 4000px wide and 6 MB, which the 5 MB limit
+ * refuses outright — leaving the one person who has the photographs unable to
+ * put them in the shop. Nothing on the storefront is served larger than about
+ * 1200px, so the pixels being refused were never going to be seen.
+ *
+ * `imageOrientation: "from-image"` is not optional. A canvas ignores the EXIF
+ * rotation flag that phones write instead of rotating the pixels, so without it
+ * every portrait photo taken on a phone uploads on its side.
+ *
+ * Every failure path returns the original file. A photo that uploads at full
+ * size is a slow page; a photo that does not upload is not a product.
+ */
+const MAX_EDGE = 2000;
+const SHRINK_ABOVE_BYTES = 1_200_000;
+
+async function shrink(file: File): Promise<File> {
+  if (typeof createImageBitmap !== "function") return file;
+
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+
+    // Already small in both senses — re-encoding would only lose detail.
+    if (scale === 1 && file.size <= SHRINK_ABOVE_BYTES) {
+      bitmap.close();
+      return file;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", 0.85),
+    );
+    // A hand-optimised JPEG can beat this. Keep whichever is smaller.
+    if (!blob || blob.size >= file.size) return file;
+
+    return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.webp`, {
+      type: "image/webp",
+      lastModified: file.lastModified,
+    });
+  } catch {
+    return file;
+  }
+}
+
 export function ImageManager({
   productId,
   productRef,
@@ -66,6 +125,7 @@ export function ImageManager({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploadFor, setUploadFor] = useState(ALL_VARIANTS);
+  const [progress, setProgress] = useState("");
 
   const remaining = MAX_IMAGES_PER_PRODUCT - images.length;
   const full = remaining <= 0;
@@ -88,7 +148,10 @@ export function ImageManager({
     start(async () => {
       // One at a time, so a single rejected file reports its own reason
       // instead of failing the batch silently.
-      for (const file of chosen) {
+      for (const [i, original] of chosen.entries()) {
+        setProgress(chosen.length > 1 ? `${i + 1} of ${chosen.length}` : "");
+        const file = await shrink(original);
+
         const form = new FormData();
         form.set("file", file);
         form.set("productId", productId);
@@ -98,10 +161,12 @@ export function ImageManager({
 
         const result = await uploadProductImage(form);
         if (!result.ok) {
-          setError(`${file.name}: ${result.error}`);
+          // Named by the file the operator chose, not by the resized copy.
+          setError(`${original.name}: ${result.error}`);
           break;
         }
       }
+      setProgress("");
       router.refresh();
       if (inputRef.current) inputRef.current.value = "";
     });
@@ -111,10 +176,12 @@ export function ImageManager({
     <div className="flex flex-col gap-4">
       {images.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {images.map((image) => (
+          {images.map((image, index) => (
             <ImageTile
               key={image.id}
               image={image}
+              index={index}
+              total={images.length}
               productId={productId}
               productName={productName}
               variants={variants}
@@ -149,7 +216,8 @@ export function ImageManager({
             {images.length === 0 ? "No photos yet" : "Add another photo"}
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
-            Drag them in, or choose files. JPEG, PNG, WebP or AVIF, up to 5 MB each.
+            Drag them in, or choose files. JPEG, PNG, WebP or AVIF. Anything large is
+            resized in the browser first, so photos straight off a phone are fine.
           </p>
 
           {/* Asked before the upload, not after: a batch of photos is almost
@@ -197,7 +265,7 @@ export function ImageManager({
             onClick={() => inputRef.current?.click()}
           >
             <Upload className="size-3.5" aria-hidden="true" />
-            {pending ? "Uploading…" : "Choose files"}
+            {pending ? `Uploading… ${progress}`.trim() : "Choose files"}
           </Button>
         </div>
       )}
@@ -212,10 +280,11 @@ export function ImageManager({
       ) : null}
 
       <p className="text-[11px] leading-relaxed text-text-tertiary">
-        The <strong className="font-medium text-text-primary">cover</strong> is what the
-        shop grid and the basket show — until a product has one the storefront draws
-        generated artwork instead. A photo marked for one size only appears when a shopper
-        picks that size; the rest show for every size.
+        These run in gallery order on the product page, and the first one is the{" "}
+        <strong className="font-medium text-text-primary">cover</strong> — what the shop
+        grid and the basket show. Until a product has one, the storefront draws generated
+        artwork instead. A photo marked for one size only appears when a shopper picks
+        that size; the rest show for every size.
       </p>
     </div>
   );
@@ -223,11 +292,15 @@ export function ImageManager({
 
 function ImageTile({
   image,
+  index,
+  total,
   productId,
   productName,
   variants,
 }: {
   image: ProductImageRow;
+  index: number;
+  total: number;
   productId: string;
   productName: string;
   variants: VariantRow[];
@@ -291,6 +364,37 @@ function ImageTile({
         >
           <Trash2 className="size-3.5" aria-hidden="true" />
         </button>
+
+        {/* Order is the gallery order on the shop, and the photo at the front
+            is the cover — so moving one to the front makes it the cover, and
+            there is only ever one order to reason about. Arrows rather than
+            dragging: this has to work on a phone and from a keyboard, and
+            native drag-and-drop does neither. */}
+        {total > 1 ? (
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-ink-950/70 to-transparent px-2 pb-2 pt-6 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <button
+              type="button"
+              disabled={pending || index === 0}
+              onClick={() => run(() => moveProductImage(image.id, productId, "back"))}
+              aria-label="Move photo earlier"
+              className="flex size-7 items-center justify-center rounded-full bg-canvas/90 text-text-secondary backdrop-blur-sm transition-colors hover:text-text-primary disabled:opacity-30"
+            >
+              <ChevronLeft className="size-3.5" aria-hidden="true" />
+            </button>
+            <span className="numeric rounded-full bg-canvas/90 px-2 py-0.5 text-[10px] text-text-tertiary backdrop-blur-sm">
+              {index + 1}/{total}
+            </span>
+            <button
+              type="button"
+              disabled={pending || index === total - 1}
+              onClick={() => run(() => moveProductImage(image.id, productId, "forward"))}
+              aria-label="Move photo later"
+              className="flex size-7 items-center justify-center rounded-full bg-canvas/90 text-text-secondary backdrop-blur-sm transition-colors hover:text-text-primary disabled:opacity-30"
+            >
+              <ChevronRight className="size-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        ) : null}
 
         {/* Deleting is irreversible and the bytes go with the row, so the
             confirmation covers the photo itself rather than appearing as a

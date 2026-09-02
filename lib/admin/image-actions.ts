@@ -165,14 +165,25 @@ export async function deleteProductImage(imageId: string): Promise<ActionResult>
   return { ok: true };
 }
 
-export async function setPrimaryImage(imageId: string, productId: string): Promise<ActionResult> {
-  const denied = await guard();
-  if (denied) return denied;
-
-  const supabase = await createClient();
-
-  // A partial unique index enforces one primary per product, so the old one has
-  // to be cleared before the new one is set — not after, and not together.
+/**
+ * The gallery order, written whole.
+ *
+ * Position and "is this the cover" used to be able to disagree: the storefront
+ * sorted the primary to the front regardless of its position, so moving the
+ * second photo ahead of the first appeared to do nothing. There is only one
+ * order now — the one on screen — and the photo at the front of it is the
+ * cover. That makes "first" and "cover" the same fact instead of two facts that
+ * can contradict each other.
+ *
+ * A partial unique index allows one primary per product, so every primary is
+ * cleared before the new one is set. Positions carry no such constraint, which
+ * is why they can be rewritten in place without a temporary shuffle.
+ */
+async function writeOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  productId: string,
+  orderedIds: string[],
+): Promise<ActionResult> {
   const cleared = await supabase
     .from("product_images")
     .update({ is_primary: false })
@@ -180,15 +191,76 @@ export async function setPrimaryImage(imageId: string, productId: string): Promi
     .eq("is_primary", true);
   if (cleared.error) return { ok: false, error: cleared.error.message };
 
-  const { error } = await supabase
-    .from("product_images")
-    .update({ is_primary: true })
-    .eq("id", imageId);
-  if (error) return { ok: false, error: error.message };
+  for (const [index, id] of orderedIds.entries()) {
+    const { error } = await supabase
+      .from("product_images")
+      .update({ position: index })
+      .eq("id", id);
+    if (error) return { ok: false, error: error.message };
+  }
+
+  if (orderedIds.length > 0) {
+    const { error } = await supabase
+      .from("product_images")
+      .update({ is_primary: true })
+      .eq("id", orderedIds[0]);
+    if (error) return { ok: false, error: error.message };
+  }
 
   revalidatePath("/admin/products", "layout");
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/** The current order, as both the panel and the shop display it. */
+async function currentOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  productId: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("product_images")
+    .select("id, position, is_primary")
+    .eq("product_id", productId);
+
+  return ((data ?? []) as { id: string; position: number; is_primary: boolean }[])
+    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.position - b.position)
+    .map((r) => r.id);
+}
+
+export async function setPrimaryImage(imageId: string, productId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+  const order = await currentOrder(supabase, productId);
+  if (!order.includes(imageId)) return { ok: false, error: "That image is already gone." };
+
+  // Making a photo the cover moves it to the front, because the cover is the
+  // front. Leaving it where it was is what let the two disagree.
+  return writeOrder(supabase, productId, [imageId, ...order.filter((id) => id !== imageId)]);
+}
+
+/** Nudge one photo one place through the gallery. */
+export async function moveProductImage(
+  imageId: string,
+  productId: string,
+  direction: "back" | "forward",
+): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+  const order = await currentOrder(supabase, productId);
+
+  const index = order.indexOf(imageId);
+  const swapWith = direction === "back" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= order.length) {
+    return { ok: false, error: "That photo is already at the end." };
+  }
+
+  const next = [...order];
+  [next[index], next[swapWith]] = [next[swapWith], next[index]];
+  return writeOrder(supabase, productId, next);
 }
 
 export async function updateImageMeta(

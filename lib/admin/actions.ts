@@ -160,3 +160,52 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   redirect("/admin/login");
 }
+
+/**
+ * Change your own password.
+ *
+ * The current password is re-checked here even though the caller is already
+ * signed in. A live session is not proof of knowing the password — it is proof
+ * of holding a cookie — and without this step a borrowed laptop or a stolen
+ * session token becomes permanent ownership of the account. Supabase can
+ * enforce the same rule server-side (`secure_password_change`), but that is a
+ * project setting someone can switch off; this is in the code path.
+ *
+ * There is deliberately no "change someone else's password" here. An admin who
+ * can reset a colleague's credentials can lock the owner out of their own shop,
+ * and the panel has no second channel to recover from that.
+ */
+const MIN_PASSWORD = 12;
+
+export async function changeOwnPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<ActionResult> {
+  const admin = await getSessionAdmin();
+  if (!admin) return { ok: false, error: "Not signed in." };
+
+  if (newPassword.length < MIN_PASSWORD) {
+    return { ok: false, error: `Use at least ${MIN_PASSWORD} characters.` };
+  }
+  if (newPassword === currentPassword) {
+    return { ok: false, error: "That is the password you already have." };
+  }
+
+  const supabase = await createClient();
+  const email = toEmail(admin.username);
+  if (!email) return { ok: false, error: "This account cannot change its own password." };
+
+  // Re-authenticate. Unlike sign-in, being specific is safe: whoever is asking
+  // is already inside, so "wrong password" tells them nothing they could not
+  // find out by trying again.
+  const { error: reauth } = await supabase.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  });
+  if (reauth) return { ok: false, error: "That is not your current password." };
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+
+  return { ok: true };
+}

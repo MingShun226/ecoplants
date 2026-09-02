@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdminCard, AdminPage } from "@/components/admin/admin-page";
-import { SettingsForm } from "@/components/admin/misc-forms";
+import { ChangePasswordForm, SettingsForm } from "@/components/admin/misc-forms";
+import { getSessionAdmin } from "@/lib/admin/session";
 import { getSettings } from "@/lib/admin/settings";
 import { formatStamp } from "@/lib/admin/format";
 
@@ -8,6 +9,9 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const settings = await getSettings();
+  // The layout above already refused anyone without one, so this cannot be null
+  // by the time the page renders.
+  const admin = await getSessionAdmin();
 
   return (
     <AdminPage
@@ -23,6 +27,13 @@ export default async function SettingsPage() {
         }
       >
         <SettingsForm settings={settings} />
+      </AdminCard>
+
+      <AdminCard
+        title="Your password"
+        lead={`Signed in as ${admin?.username ?? "—"}. Changing it does not sign you out.`}
+      >
+        <ChangePasswordForm username={admin?.username ?? ""} />
       </AdminCard>
 
       <AdminCard title="Not editable here">

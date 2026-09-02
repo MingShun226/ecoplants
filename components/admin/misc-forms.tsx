@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, ImageIcon, Sparkles, Trash2 } from "lucide-reac
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { changeOwnPassword } from "@/lib/admin/actions";
 import {
   deleteReview,
   reorderCategory,
@@ -582,5 +583,118 @@ export function CategoryImageForm({
         ) : null}
       </div>
     </div>
+  );
+}
+
+// ------------------------------------------------------------- password --
+
+/**
+ * Change your own password.
+ *
+ * Three fields rather than two: the confirmation catches a typo that would
+ * otherwise lock the only owner account out of the shop, which is the one
+ * mistake here with no cheap recovery.
+ *
+ * The session survives the change — Supabase reissues tokens in place — so
+ * there is no redirect afterwards, just a confirmation.
+ */
+export function ChangePasswordForm({ username }: { username: string }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [f, setF] = useState({ current: "", next: "", confirm: "" });
+
+  const mismatch = f.confirm.length > 0 && f.next !== f.confirm;
+  const ready = f.current.length > 0 && f.next.length >= 12 && f.next === f.confirm;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError(null);
+        start(async () => {
+          const result = await changeOwnPassword(f.current, f.next);
+          if (result.ok) {
+            setF({ current: "", next: "", confirm: "" });
+            setSaved(true);
+            window.setTimeout(() => setSaved(false), 4000);
+          } else {
+            setError(result.error);
+          }
+        });
+      }}
+      className="flex flex-col gap-5"
+    >
+      {/* Here for the browser's benefit, not the reader's: without a username
+          field a password manager will offer to save the new password against
+          no account, or silently decline to save it at all. */}
+      <input type="text" name="username" value={username} autoComplete="username" readOnly hidden />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="pw-current">Current password</Label>
+          <Input
+            id="pw-current"
+            type="password"
+            autoComplete="current-password"
+            value={f.current}
+            onChange={(e) => setF({ ...f, current: e.target.value })}
+            required
+            className="h-8 rounded-sm text-[13px]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="pw-next">New password</Label>
+          <Input
+            id="pw-next"
+            type="password"
+            autoComplete="new-password"
+            value={f.next}
+            onChange={(e) => setF({ ...f, next: e.target.value })}
+            required
+            minLength={12}
+            className="h-8 rounded-sm text-[13px]"
+          />
+          <p className="text-[11px] leading-relaxed text-text-tertiary">
+            At least 12 characters.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="pw-confirm">Repeat new password</Label>
+          <Input
+            id="pw-confirm"
+            type="password"
+            autoComplete="new-password"
+            value={f.confirm}
+            onChange={(e) => setF({ ...f, confirm: e.target.value })}
+            required
+            aria-invalid={mismatch || undefined}
+            className={cn("h-8 rounded-sm text-[13px]", mismatch && "border-danger")}
+          />
+          {mismatch ? (
+            <p className="text-[11px] leading-relaxed text-danger">These do not match.</p>
+          ) : null}
+        </div>
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-[12px] leading-relaxed text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" size="sm" disabled={pending || !ready}>
+          {pending ? "Changing…" : "Change password"}
+        </Button>
+        {saved ? (
+          <span role="status" className="text-[12px] text-success">
+            Password changed.
+          </span>
+        ) : null}
+      </div>
+    </form>
   );
 }

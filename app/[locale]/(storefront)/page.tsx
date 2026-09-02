@@ -80,7 +80,18 @@ export default async function HomePage({
   const format = await getFormatter();
   const activeLocale = (await getLocale()) as Locale;
 
-  const plantCategories = categories.filter((c) => c.type === "plants");
+  /**
+   * The board below the hero asks "where will it live?", so it holds the
+   * categories that answer that — a room, a balcony, a house with a cat.
+   *
+   * New arrivals is not one of those. It is a view of the same plants ordered
+   * by when they landed, so as a tile beside Indoor and Garden it invites a
+   * choice between a place and a date, which are not alternatives. It stays in
+   * the nav, where a list of ways into the catalogue is exactly what is on
+   * offer. Dropping it also leaves four tiles for a four-column grid, instead
+   * of a fifth stranded on its own row.
+   */
+  const plantCategories = categories.filter((c) => c.type === "plants" && c.slug !== "new");
 
   // One round trip for the whole catalogue; every section slices from it.
   const [featured, petSafeAll, categoryCovers] = await Promise.all([

@@ -17,6 +17,7 @@ import {
 } from "@/lib/admin/catalogue-actions";
 import type { LocaleCode } from "@/lib/admin/enums";
 import { LOCALE_LABEL, LOCALES } from "@/lib/admin/enums";
+import { ImagePreview } from "@/components/admin/image-preview";
 import { standardise } from "@/lib/admin/image-canvas";
 import type { ShopSettings } from "@/lib/admin/settings";
 import { Button } from "@/components/ui/button";
@@ -546,7 +547,11 @@ export function CategoryImageForm({
     <div className="flex items-start gap-3">
       <div className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border-subtle bg-surface-sunken">
         {src ? (
-          <Image src={src} alt={name} fill sizes="64px" className="object-cover" />
+          // 64px is enough to tell one cover from another and not enough to
+          // judge one, which is what this panel is for.
+          <ImagePreview src={src} alt={name} className="absolute inset-0">
+            <Image src={src} alt={name} fill sizes="64px" className="object-cover" />
+          </ImagePreview>
         ) : (
           <span className="flex h-full items-center justify-center">
             <ImageIcon className="size-4 text-text-tertiary" aria-hidden="true" />
@@ -581,7 +586,15 @@ export function CategoryImageForm({
               disabled={pending}
               onClick={() =>
                 start(async () => {
-                  await removeCategoryImage(categoryId);
+                  // The result was thrown away, so a refusal — a policy, a
+                  // dropped connection — looked exactly like a button that
+                  // does nothing when clicked.
+                  const result = await removeCategoryImage(categoryId);
+                  if (!result.ok) {
+                    setError(result.error);
+                    return;
+                  }
+                  setError(null);
                   router.refresh();
                 })
               }

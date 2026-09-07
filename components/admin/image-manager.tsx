@@ -13,6 +13,7 @@ import {
   type ImageKind,
 } from "@/lib/admin/image-actions";
 import { MAX_IMAGES_PER_PRODUCT } from "@/lib/admin/enums";
+import { ImagePreview } from "@/components/admin/image-preview";
 import { standardise } from "@/lib/admin/image-canvas";
 import type { ProductImageRow, VariantRow } from "@/lib/admin/catalogue";
 import { Button } from "@/components/ui/button";
@@ -283,13 +284,18 @@ function ImageTile({
   return (
     <li className="overflow-hidden rounded-xl border border-border-subtle bg-surface">
       <div className="group relative aspect-square bg-surface-sunken">
-        <Image
-          src={image.src}
-          alt={image.alt || productName}
-          fill
-          sizes="(max-width: 640px) 50vw, 220px"
-          className="object-cover"
-        />
+        {/* The tile is square and the photograph is 4:5, so what is on screen
+            here is a crop of a crop. Enlarging is how you check the shot is the
+            one you meant before publishing it. */}
+        <ImagePreview src={image.src} alt={image.alt || productName} className="absolute inset-0">
+          <Image
+            src={image.src}
+            alt={image.alt || productName}
+            fill
+            sizes="(max-width: 640px) 50vw, 220px"
+            className="object-cover"
+          />
+        </ImagePreview>
 
         {image.isPrimary ? (
           <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-ink-950 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-ink-50">

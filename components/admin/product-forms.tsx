@@ -2,7 +2,7 @@
 
 import { Check, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   deleteProduct,
   setProductActive,
@@ -10,7 +10,7 @@ import {
   updateProductFacts,
   updateTranslation,
 } from "@/lib/admin/catalogue-actions";
-import type { PlantAttributes, ProductDetail, ProductTranslation } from "@/lib/admin/catalogue";
+import type { PlantAttributes, ProductDetail } from "@/lib/admin/catalogue";
 import type { LocaleCode } from "@/lib/admin/enums";
 import {
   BADGE_KEYS,
@@ -249,25 +249,123 @@ export function ProductFactsForm({
 
 // ----------------------------------------------------------- translations --
 
-const EMPTY: Omit<ProductTranslation, "locale"> = {
-  name: "",
-  slug: "",
-  tagline: null,
-  description: null,
-  careSummary: null,
-  climateNote: null,
-  toxicityNote: null,
+/** One language's copy, in the shape the form edits and the action saves. */
+type Copy = {
+  name: string;
+  slug: string;
+  tagline: string;
+  description: string;
+  careSummary: string;
+  climateNote: string;
+  toxicityNote: string;
 };
 
+/**
+ * All three languages, one Save.
+ *
+ * The tabs used to remount the form by key, which meant switching from Chinese
+ * to Malay threw the Chinese edits away — silently, with no warning, and after
+ * the work was done. That is the worst shape a data-loss bug can take.
+ *
+ * So the drafts for all three live here and the tabs only change which one is
+ * on screen. Nothing is lost by switching, the button saves every language that
+ * changed, and a tab carrying unsaved work says so on its own chip. It is also
+ * how the job is actually done: someone writing a listing writes it three times
+ * in a row, not once and then again next week.
+ */
 export function TranslationEditor({ product }: { product: ProductDetail }) {
   const [locale, setLocale] = useState<LocaleCode>("en");
-  const existing = product.translations.find((t) => t.locale === locale);
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+
+  /** What the database holds, per language, as the form's field shape. */
+  const saved = useMemo(() => {
+    const out = {} as Record<LocaleCode, Copy>;
+    for (const l of LOCALES) {
+      const row = product.translations.find((t) => t.locale === l);
+      out[l] = {
+        name: row?.name ?? "",
+        slug: row?.slug ?? "",
+        tagline: row?.tagline ?? "",
+        description: row?.description ?? "",
+        careSummary: row?.careSummary ?? "",
+        climateNote: row?.climateNote ?? "",
+        toxicityNote: row?.toxicityNote ?? "",
+      };
+    }
+    return out;
+  }, [product.translations]);
+
+  /**
+   * AI Assist writes into the same fields a person types into, and leaves them
+   * unsaved — so a draft is indistinguishable from typing, which is the point.
+   * It reaches all three languages at once now, because all three exist.
+   */
+  const { draft, appliedAt } = useAiDraft();
+
+  const [drafts, setDrafts] = useState(() => {
+    const out = {} as Record<LocaleCode, Copy>;
+    for (const l of LOCALES) out[l] = applyDraftCopy(saved[l], draft, l);
+    return out;
+  });
+
+  // Adjusted during render rather than in an effect, so the fields never paint
+  // their old values first.
+  const [seenDraft, setSeenDraft] = useState(appliedAt);
+  if (appliedAt !== seenDraft) {
+    setSeenDraft(appliedAt);
+    if (draft) {
+      setDrafts((prev) => {
+        const out = { ...prev };
+        for (const l of LOCALES) out[l] = applyDraftCopy(prev[l], draft, l);
+        return out;
+      });
+    }
+  }
+
+  const changedIn = (l: LocaleCode) => JSON.stringify(drafts[l]) !== JSON.stringify(saved[l]);
+  const changed = LOCALES.filter(changedIn);
+
+  const set = (key: keyof Copy) => (value: string) =>
+    setDrafts((prev) => ({ ...prev, [locale]: { ...prev[locale], [key]: value } }));
+
+  const f = drafts[locale];
+  const isNew = !product.translations.some((t) => t.locale === locale);
+
+  const save = () => {
+    setError(null);
+    start(async () => {
+      // One at a time, and stop at the first refusal. A slug collision in Malay
+      // should not leave the Chinese copy unsaved without saying which failed.
+      for (const l of changed) {
+        const result = await updateTranslation(product.id, l, drafts[l]);
+        if (!result.ok) {
+          setError(`${LOCALE_LABEL[l]}: ${result.error}`);
+          return;
+        }
+      }
+      setJustSaved(true);
+      // Refreshing re-reads `product.translations`, which recomputes `saved`
+      // and clears every unsaved marker without touching the drafts.
+      router.refresh();
+      window.setTimeout(() => setJustSaved(false), 2000);
+    });
+  };
 
   return (
-    <div className="flex flex-col gap-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        save();
+      }}
+      className="flex flex-col gap-4"
+    >
       <div className="flex flex-wrap gap-1.5">
         {LOCALES.map((l) => {
-          const has = product.translations.some((t) => t.locale === l);
+          const missing = !product.translations.some((t) => t.locale === l);
+          const unsaved = changedIn(l);
           return (
             <button
               key={l}
@@ -281,9 +379,23 @@ export function TranslationEditor({ product }: { product: ProductDetail }) {
               )}
             >
               {LOCALE_LABEL[l]}
-              {!has ? (
+              {/* Two different dots. Amber says this language has no copy at
+                  all; clay says it has edits nobody has saved — the one that
+                  matters when you are about to leave the page. */}
+              {unsaved ? (
                 <span
-                  className={cn("size-1.5 rounded-full", l === locale ? "bg-ink-50/60" : "bg-warning")}
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    l === locale ? "bg-ink-50" : "bg-clay-600",
+                  )}
+                  aria-label="unsaved changes"
+                />
+              ) : missing ? (
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    l === locale ? "bg-ink-50/60" : "bg-warning",
+                  )}
                   aria-label="missing"
                 />
               ) : null}
@@ -292,99 +404,6 @@ export function TranslationEditor({ product }: { product: ProductDetail }) {
         })}
       </div>
 
-      {/* key= remounts the form when the locale changes, so switching tabs does
-          not carry one language's draft into another's fields. */}
-      <TranslationForm
-        key={locale}
-        productId={product.id}
-        locale={locale}
-        initial={existing ?? { locale, ...EMPTY }}
-        isNew={!existing}
-      />
-    </div>
-  );
-}
-
-function TranslationForm({
-  productId,
-  locale,
-  initial,
-  isNew,
-}: {
-  productId: string;
-  locale: LocaleCode;
-  initial: ProductTranslation;
-  isNew: boolean;
-}) {
-  const { pending, error, saved, run } = useSave();
-
-  /**
-   * AI Assist writes into the same fields a person types into, and leaves them
-   * unsaved. `dirty` then lights the Save button by itself, so a draft is
-   * indistinguishable from typing — which is the point. It is read and
-   * committed by hand either way.
-   */
-  const { draft, appliedAt } = useAiDraft();
-
-  /**
-   * Seeded with the draft, not merely updated by it.
-   *
-   * The locale tabs above remount this component by key, so the Malay and
-   * Chinese forms do not exist at the moment the button is pressed. Applying a
-   * draft only as it arrives filled whichever tab was open and no other — and
-   * switching away and back rebuilt even that one empty, because a remount
-   * starts from the saved copy again.
-   */
-  const [f, setF] = useState(() =>
-    applyDraftCopy(
-      {
-        name: initial.name,
-        slug: initial.slug,
-        tagline: initial.tagline ?? "",
-        description: initial.description ?? "",
-        careSummary: initial.careSummary ?? "",
-        climateNote: initial.climateNote ?? "",
-        toxicityNote: initial.toxicityNote ?? "",
-      },
-      draft,
-      locale,
-    ),
-  );
-
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setF({ ...f, [k]: e.target.value });
-
-  /**
-   * A draft arriving while this tab is already open.
-   *
-   * Adjusted during render rather than in an effect: React re-runs the
-   * component before touching the DOM, so the fields never paint their old
-   * values first. An effect would show the empty form, then flip it.
-   */
-  const [seenDraft, setSeenDraft] = useState(appliedAt);
-
-  if (appliedAt !== seenDraft) {
-    setSeenDraft(appliedAt);
-    if (draft) setF((prev) => applyDraftCopy(prev, draft, locale));
-  }
-
-  const dirty =
-    f.name !== initial.name ||
-    f.slug !== initial.slug ||
-    f.tagline !== (initial.tagline ?? "") ||
-    f.description !== (initial.description ?? "") ||
-    f.careSummary !== (initial.careSummary ?? "") ||
-    f.climateNote !== (initial.climateNote ?? "") ||
-    f.toxicityNote !== (initial.toxicityNote ?? "");
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        run(() => updateTranslation(productId, locale, f));
-      }}
-      className="flex flex-col gap-4"
-    >
       {isNew ? (
         <p className="rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-[13px] leading-relaxed">
           No {LOCALE_LABEL[locale]} copy exists yet. The storefront currently falls back
@@ -398,7 +417,7 @@ function TranslationForm({
           <Input
             id={`name-${locale}`}
             value={f.name}
-            onChange={set("name")}
+            onChange={(e) => set("name")(e.target.value)}
             required
             className="h-8 rounded-sm text-[13px]"
           />
@@ -408,7 +427,7 @@ function TranslationForm({
           <Input
             id={`slug-${locale}`}
             value={f.slug}
-            onChange={set("slug")}
+            onChange={(e) => set("slug")(e.target.value)}
             required
             className="h-8 rounded-sm text-[13px]"
           />
@@ -418,26 +437,31 @@ function TranslationForm({
         </div>
       </div>
 
-      <Field label="Tagline" id={`tagline-${locale}`} value={f.tagline} onChange={set("tagline")} />
+      <Field
+        label="Tagline"
+        id={`tagline-${locale}`}
+        value={f.tagline}
+        onChange={(e) => set("tagline")(e.target.value)}
+      />
       <Field
         label="Description"
         id={`desc-${locale}`}
         value={f.description}
-        onChange={set("description")}
+        onChange={(e) => set("description")(e.target.value)}
         rows={4}
       />
       <Field
         label="Care summary"
         id={`care-${locale}`}
         value={f.careSummary}
-        onChange={set("careSummary")}
+        onChange={(e) => set("careSummary")(e.target.value)}
         rows={2}
       />
       <Field
         label="Climate note"
         id={`climate-${locale}`}
         value={f.climateNote}
-        onChange={set("climateNote")}
+        onChange={(e) => set("climateNote")(e.target.value)}
         rows={2}
         hint="Malaysian conditions specifically — humidity, monsoon, indoor aircon."
       />
@@ -445,18 +469,43 @@ function TranslationForm({
         label="Toxicity note"
         id={`tox-${locale}`}
         value={f.toxicityNote}
-        onChange={set("toxicityNote")}
+        onChange={(e) => set("toxicityNote")(e.target.value)}
         rows={2}
         hint="What happens if a pet or child eats it. Leave blank only if genuinely unknown."
       />
 
-      <SaveRow
-        pending={pending}
-        saved={saved}
-        error={error}
-        dirty={dirty}
-        label={isNew ? `Add ${LOCALE_LABEL[locale]}` : "Save"}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="sm" disabled={pending || changed.length === 0}>
+          {pending
+            ? "Saving…"
+            : justSaved
+              ? "Saved"
+              : changed.length > 1
+                ? `Save ${changed.length} languages`
+                : "Save"}
+        </Button>
+
+        {justSaved && !pending ? (
+          <span className="flex items-center gap-1 text-[12px] text-success">
+            <Check className="size-3.5" aria-hidden="true" />
+            Live on the storefront
+          </span>
+        ) : null}
+
+        {/* Named, because the button is at the bottom of whichever tab happens
+            to be open and the other two are out of sight. */}
+        {!pending && !justSaved && changed.length > 0 ? (
+          <span className="text-[12px] text-text-tertiary">
+            Unsaved: {changed.map((l) => LOCALE_LABEL[l]).join(", ")}
+          </span>
+        ) : null}
+
+        {error ? (
+          <p role="alert" className="text-[13px] leading-relaxed text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </form>
   );
 }

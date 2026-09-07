@@ -115,7 +115,7 @@ export function formatPhone(e164: string): string {
  * `@staff.ecoplants.my`, so the two namespaces cannot overlap, and neither can
  * ever collide with a real mailbox on `ecoplants.my` itself.
  */
-const AUTH_DOMAIN = "phone.ecoplants.my";
+export const AUTH_DOMAIN = "phone.ecoplants.my";
 
 export function toAuthEmail(e164: string): string {
   return `${e164.replace(/^\+/, "")}@${AUTH_DOMAIN}`;

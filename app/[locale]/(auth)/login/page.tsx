@@ -32,11 +32,11 @@ export default async function LoginPage({
       <h1 className="font-display text-display-sm leading-[1.04]">{t("signInTitle")}</h1>
       <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">{t("signInLead")}</p>
 
-      <div className="mt-9">
+      <div className="mt-7">
         <SignInForm />
       </div>
 
-      <p className="mt-9 rounded-lg bg-surface-sunken px-5 py-4 text-[13px] leading-relaxed text-text-secondary">
+      <p className="mt-7 rounded-lg bg-surface-sunken px-5 py-4 text-[13px] leading-relaxed text-text-secondary">
         {t("guestNote")}
       </p>
     </div>

@@ -31,13 +31,13 @@ export default async function SignUpPage({
       <h1 className="font-display text-display-sm leading-[1.04]">{t("signUpTitle")}</h1>
       <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">{t("signUpLead")}</p>
 
-      <div className="mt-9">
+      <div className="mt-7">
         <SignUpForm />
       </div>
 
       {/* Said plainly rather than discovered later: a new account starts empty
           even for someone who has ordered here before. */}
-      <p className="mt-9 rounded-lg bg-surface-sunken px-5 py-4 text-[13px] leading-relaxed text-text-secondary">
+      <p className="mt-7 rounded-lg bg-surface-sunken px-5 py-4 text-[13px] leading-relaxed text-text-secondary">
         {t("unverifiedNote")}
       </p>
     </div>

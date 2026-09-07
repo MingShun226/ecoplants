@@ -39,14 +39,14 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   ];
 
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div className="flex min-h-dvh flex-col lg:h-dvh lg:flex-row lg:overflow-hidden">
       {/* ------------------------------------------------------------ brand */}
       {/* Hidden below `lg`, where it was costing the whole first screen: on a
           phone the panel stacked above the form and pushed every field under
           the fold, so someone arriving to sign in had to scroll past the
           marketing to reach the thing they came for. The compact header inside
           `main` carries the brand on small screens instead. */}
-      <aside className="on-dark-tokens relative isolate hidden flex-col justify-between overflow-hidden bg-ink-950 px-7 py-8 text-text-primary sm:px-10 lg:flex lg:min-h-dvh lg:w-[46%] lg:px-14 lg:py-12 xl:w-1/2">
+      <aside className="on-dark-tokens relative isolate hidden flex-col justify-between overflow-hidden bg-ink-950 px-7 py-8 text-text-primary sm:px-10 lg:flex lg:h-full lg:w-[46%] lg:px-14 lg:py-12 xl:w-1/2">
         {/* Foliage as backdrop, not as a picture: oversized, bled off two
             edges, and low-contrast, so it reads as texture behind the words
             rather than as a plant someone forgot to crop. */}
@@ -66,7 +66,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           href="/"
           className="flex w-fit items-center gap-2.5 text-text-primary transition-opacity hover:opacity-80"
         >
-          <Wordmark />
+          {/* The height is not optional. `LeafMark` sizes itself with `h-full`,
+              which resolves against nothing when no height is given, and the
+              mark falls back to the intrinsic size of a 512px source. */}
+          <Wordmark className="h-7 w-auto" />
         </Link>
 
         <div className="mt-10 max-w-lg lg:mt-0">
@@ -101,7 +104,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </aside>
 
       {/* ------------------------------------------------------------- form */}
-      <main className="flex flex-1 flex-col bg-canvas px-6 py-6 sm:px-10 lg:py-14">
+      <main className="flex flex-1 flex-col bg-canvas px-6 py-6 sm:px-10 lg:min-h-0 lg:overflow-y-auto lg:py-10">
         {/* One row on mobile: the way out on the left, the mark on the right.
             The wordmark is `lg:hidden` because above that the panel already
             carries it, and two wordmarks on one screen is one too many. */}
@@ -119,7 +122,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
         {/* perspective lives on the parent; the flipping face is in template.tsx */}
         <div className="flex flex-1 items-center justify-center [perspective:1600px]">
-          <div className="w-full max-w-[25rem] py-8 lg:py-10">{children}</div>
+          <div className="w-full max-w-[25rem] py-8 lg:py-6">{children}</div>
         </div>
       </main>
     </div>

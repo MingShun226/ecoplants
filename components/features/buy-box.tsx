@@ -88,21 +88,33 @@ export function BuyBox({ product }: { product: Product }) {
         </div>
       </fieldset>
 
-      {/* Hairline spec strip — the same construction as the care grid. */}
-      <dl className="mt-6 grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border-subtle bg-border-subtle text-center">
+      {/* Hairline spec strip — the same construction as the care grid.
+
+          Two measurements, not three. The pot's material was the third, and it
+          is not shown to shoppers for now.
+
+          Each carries a drawing of what is being measured, because "30 cm" and
+          "14 cm" side by side are two numbers a shopper has to read a label to
+          tell apart — one is how tall the plant stands, the other how wide the
+          pot is across, and the icons say which at a glance. */}
+      <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border-subtle bg-border-subtle text-center">
         {[
           {
             label: t("plantHeight"),
             value: format.number(variant.heightCm, "centimetre"),
+            icon: <HeightMark />,
           },
           {
             label: t("potWidth"),
             value: format.number(variant.potDiameterCm, "centimetre"),
+            icon: <WidthMark />,
           },
-          { label: t("pot"), value: <PotMaterial variant={variant} /> },
         ].map((spec, i) => (
-          <div key={i} className="bg-surface px-2 py-4">
-            <dt className="text-[10px] uppercase tracking-[0.16em] text-text-tertiary">
+          <div key={i} className="flex flex-col items-center bg-surface px-2 py-4">
+            <span className="text-text-tertiary" aria-hidden="true">
+              {spec.icon}
+            </span>
+            <dt className="mt-2 text-[10px] uppercase tracking-[0.16em] text-text-tertiary">
               {spec.label}
             </dt>
             <dd className="numeric mt-1 text-sm">{spec.value}</dd>
@@ -169,22 +181,30 @@ export function BuyBox({ product }: { product: Product }) {
   );
 }
 
-function PotMaterial({ variant }: { variant: Variant }) {
-  const t = useTranslations("potMaterials");
-  return <>{t(variant.potMaterialKey)}</>;
+/**
+ * A height: two rules with a double-headed arrow between them, the way a
+ * dimension is marked on a drawing. `currentColor` so it takes the cell's
+ * colour in either theme.
+ */
+function HeightMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round">
+      <path d="M4 2.5h10M4 15.5h10" />
+      <path d="M9 4.5v9" />
+      <path d="M6.75 6.75 9 4.5l2.25 2.25M6.75 11.25 9 13.5l2.25-2.25" />
+    </svg>
+  );
 }
 
-/**
- * Colour and material are separate fields because a cream fibreclay pot and a
- * cream ceramic pot are different products — but they often share a word, and
- * "Terracotta terracotta" is not a description.
- */
-function PotDescription({ variant }: { variant: Variant }) {
-  const tColor = useTranslations("potColors");
-  const tMaterial = useTranslations("potMaterials");
-  const colour = tColor(variant.potColorKey);
-  const material = tMaterial(variant.potMaterialKey);
-  return <>{colour === material ? colour : `${colour} · ${material}`}</>;
+/** The same mark turned through ninety degrees: a width across. */
+function WidthMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round">
+      <path d="M2.5 4v10M15.5 4v10" />
+      <path d="M4.5 9h9" />
+      <path d="M6.75 6.75 4.5 9l2.25 2.25M11.25 6.75 13.5 9l-2.25 2.25" />
+    </svg>
+  );
 }
 
 function VariantOption({
@@ -216,10 +236,14 @@ function VariantOption({
     >
       <span className="min-w-0">
         <span className="block text-sm">{ts(variant.sizeKey)}</span>
-        <span className="block truncate text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
-          <PotDescription variant={variant} />
-          {soldOut ? ` · ${ta("soldOut")}` : ""}
-        </span>
+        {/* The pot used to be described here. It is not shown to shoppers for
+            now — it is still recorded per variant in the admin, so putting it
+            back is this line and the spec cell below. */}
+        {soldOut ? (
+          <span className="block truncate text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
+            {ta("soldOut")}
+          </span>
+        ) : null}
       </span>
       <span className="numeric shrink-0 text-sm font-medium">
         {format.number(toMajor(variant.priceSen), "currency")}

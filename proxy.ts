@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
+import { AUTH_DOMAIN } from "@/lib/account/phone";
 import { routing } from "@/i18n/routing";
 
 /**
@@ -74,7 +75,24 @@ export default async function proxy(request: NextRequest) {
   // unconditionally on purpose — reading the session there would opt all 42
   // prerendered product pages out of static rendering (ADR 0008) — so the
   // short-circuit belongs at the edge instead.
-  if (!user) {
+  /*
+   * A signed-in staff member is not a signed-in shopper.
+   *
+   * `/account` needs a row in `customers`, and an admin has one in
+   * `admin_users` instead — two separate identities against the same auth
+   * provider (ADR 0006). Checking only for *a* user let anyone signed into the
+   * panel through, so the page rendered the storefront layout, found no
+   * customer, and threw its own redirect: exactly the flash of a header and
+   * footer wrapped around nothing that this block exists to prevent, and the
+   * commonest way to hit it, because the panel is open in the next tab.
+   *
+   * The two are told apart by the subdomain their auth email is keyed on, so
+   * this costs no query at the edge. It stays a short-circuit, not the guard —
+   * `/account` still checks for itself, and RLS refuses the data regardless.
+   */
+  const isCustomer = user?.email?.endsWith(`@${AUTH_DOMAIN}`) ?? false;
+
+  if (!isCustomer) {
     const account = request.nextUrl.pathname.match(ACCOUNT);
     if (account) {
       return NextResponse.redirect(new URL(`/${account[1]}/login`, request.url));

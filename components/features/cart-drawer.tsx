@@ -36,8 +36,6 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   const ta = useTranslations("actions");
   const ts = useTranslations("shipping");
   const tSize = useTranslations("sizes");
-  const tColor = useTranslations("potColors");
-  const tMaterial = useTranslations("potMaterials");
   const format = useFormatter();
   const locale = useLocale() as Locale;
   const { lines, subtotalSen, setQty, remove } = useCart();
@@ -154,8 +152,6 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 <ul className="flex-1 overflow-y-auto">
                   {lines.map((line) => {
                     const tr = line.product.t[locale];
-                    const colour = tColor(line.variant.potColorKey);
-                    const material = tMaterial(line.variant.potMaterialKey);
                     return (
                       <li
                         key={line.variant.id}
@@ -177,9 +173,10 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                                   {tr.name}
                                 </Link>
                               </p>
+                              {/* The pot was described here too. Not shown to
+                                  shoppers for now; still recorded per variant. */}
                               <p className="mt-1 text-[10.5px] uppercase tracking-[0.14em] text-text-tertiary">
-                                {tSize(line.variant.sizeKey)} ·{" "}
-                                {colour === material ? colour : `${colour} ${material}`}
+                                {tSize(line.variant.sizeKey)}
                               </p>
                             </div>
                             <p className="numeric shrink-0 text-sm font-medium">

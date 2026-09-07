@@ -100,7 +100,8 @@
     "quizLead": "How much light, how often you will realistically water, whether there is a cat in the house. We shortlist three that fit — and tell you which to avoid.",
     "quizStatQuestions": "questions",
     "quizStatTime": "to finish",
-    "trust1Body": "Photo proof, free replacement, no arguments. One per item."
+    "trust1Body": "Photo proof, free replacement, no arguments. One per item.",
+    "newEyebrow": "Just in"
   },
   "plp": {
     "resultCount": "{count, plural, =0 {No plants} one {# plant} other {# plants}}",

@@ -92,7 +92,18 @@ export default async function HomePage({
    * offer. Dropping it also leaves four tiles for a four-column grid, instead
    * of a fifth stranded on its own row.
    */
-  const plantCategories = categories.filter((c) => c.type === "plants" && c.slug !== "new");
+  /*
+   * Three places a plant can live, and that is the whole idea of the section.
+   *
+   * "Hard to kill" was a fourth tile and is not a place — it answers a
+   * different question, sits in the nav and on the listing as a filter, and
+   * made a row of four read as "some categories" rather than as a choice
+   * between three. New arrivals leads them, deliberately unlike the other
+   * three: it is a moment, not a condition, and it should not look like one.
+   */
+  const placeCategories = categories.filter((c) =>
+    ["indoor", "outdoor", "pet-safe"].includes(c.slug),
+  );
 
   // One round trip for the whole catalogue; every section slices from it. The
   // pet-safe rail used to be fetched here too — a query for a section that said
@@ -106,7 +117,7 @@ export default async function HomePage({
   // JSX map is impossible, and would be a query per tile if it were not.
   const categorySamples = new Map(
     await Promise.all(
-      plantCategories.map(
+      placeCategories.map(
         async (c) => [c.slug, (await getProductsByCategory(c.slug))[0]] as const,
       ),
     ),
@@ -159,11 +170,53 @@ export default async function HomePage({
               end to end — 3,400px, a third of the whole mobile page, for five
               links. */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-x-8 sm:gap-y-14 lg:grid-cols-4">
-            {plantCategories.map((category, i) => {
+            {/*
+              New arrivals, drawn as the odd one out on purpose.
+
+              The other three are places — a dim corner, a bright room, a
+              balcony — and each shows a plant that lives there. This is a
+              moment rather than a condition, and there is no photograph that
+              means "recently". So it is a panel instead of a picture: the
+              shop's dark ground, the name set large, and nothing else. Sitting
+              first in a row of photographs, the absence of one is what marks
+              it out.
+            */}
+            <RevealSection>
+              <Link
+                href={categoryHref("new")}
+                className="group on-dark-tokens relative flex aspect-4/5 flex-col justify-between overflow-hidden rounded-lg bg-ink-950 p-4 text-text-primary transition-colors duration-500 ease-refined hover:bg-ink-900 sm:p-5"
+              >
+                <span
+                  aria-hidden="true"
+                  className="grain pointer-events-none absolute inset-0 opacity-70"
+                  style={{
+                    background:
+                      "radial-gradient(80% 60% at 25% 15%, oklch(0.322 0.039 140 / 0.75) 0%, transparent 70%)",
+                  }}
+                />
+                <span className="relative text-[10px] uppercase tracking-[0.18em] text-leaf-300">
+                  {t("newEyebrow")}
+                </span>
+                <span className="relative">
+                  <span className="block font-display text-[19px] leading-tight sm:text-2xl">
+                    {tc("newArrivals")}
+                  </span>
+                  <span className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
+                    {ta("seeAll")}
+                    <ArrowRight
+                      className="size-3.5 transition-transform duration-300 ease-refined group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </span>
+              </Link>
+            </RevealSection>
+
+            {placeCategories.map((category, i) => {
               const sample = categorySamples.get(category.slug);
               const cover = categoryCovers.get(category.slug);
               return (
-                <RevealSection key={category.id} delay={i * 0.08}>
+                <RevealSection key={category.id} delay={(i + 1) * 0.08}>
                   <Link
                     href={categoryHref(category.slug)}
                     className="group block"
@@ -266,12 +319,22 @@ export default async function HomePage({
 
               {/* The ledger — four rows, hairline-divided, price on the right.
                   Same content as four large tiles, a quarter the ink. */}
-              <div className="flex flex-col justify-center overflow-hidden rounded-xl border border-border-subtle bg-surface lg:col-span-5">
+              {/*
+                `self-start`, and rows that size to their content.
+
+                Grid items stretch by default, so the ledger was as tall as the
+                feature panel beside it and its rows carried `flex-1` to fill
+                that height. With four rows that reads as a list; with two it
+                spread a 64px thumbnail over half a screen of nothing. Its own
+                height instead, sitting at the top of the column, which is
+                right at any number of rows.
+              */}
+              <div className="flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:col-span-5 lg:self-start">
                 {collectionList.map((item) => (
                   <Link
                     key={item.id}
                     href={`/plants/${item.t[activeLocale].slug}`}
-                    className="group flex flex-1 items-center gap-5 border-b border-border-subtle px-5 py-4 transition-colors duration-300 last:border-b-0 hover:bg-surface-sunken"
+                    className="group flex items-center gap-5 border-b border-border-subtle px-5 py-5 transition-colors duration-300 last:border-b-0 hover:bg-surface-sunken"
                   >
                     <span className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border-subtle">
                       <PlantImage product={item} sizes="64px" />
@@ -404,7 +467,10 @@ export default async function HomePage({
           </RevealSection>
 
           <RevealSection>
-            <ul className="grid gap-px overflow-hidden rounded-xl border border-border-subtle bg-border-subtle sm:grid-cols-2 lg:grid-cols-4">
+            {/* Three across, because there are three. The gap is a background
+                showing through, so a fourth column with nothing in it drew an
+                empty panel rather than nothing at all. */}
+            <ul className="grid gap-px overflow-hidden rounded-xl border border-border-subtle bg-border-subtle sm:grid-cols-3">
               {trustItems.map(({ Icon, title, body }) => (
                 <li key={title} className="flex flex-col gap-3 bg-surface p-8">
                   <Icon className="size-5 text-clay-600" aria-hidden="true" />

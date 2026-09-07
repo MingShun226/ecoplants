@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils";
 import type { ProductImage } from "@/types/catalog";
 
 /**
- * The steps a photograph can be magnified to. 1 is "fit the frame".
+ * The steps a photograph can be magnified to on a pointer device. 1 fits the
+ * frame.
  *
  * Discrete rather than continuous: a shopper is asking one question — are those
  * leaf edges browning — and answers it at a step, where a slider turns a glance
- * into an operation. Four steps is enough that the top one is grain.
+ * into an operation.
  */
 const ZOOM_LEVELS = [1, 2, 3, 4] as const;
 const MAX_ZOOM = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
@@ -19,23 +20,20 @@ const MAX_ZOOM = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
 /**
  * The full-screen photograph.
  *
- * Built on the native `<dialog>` rather than a portal of our own: it takes the
- * focus trap, the Escape key, inertness of the page behind it and the top layer
- * from the platform, all of which are easy to write badly and expensive to get
- * wrong for someone using a keyboard or a screen reader.
+ * Built on the native `<dialog>`, which brings the focus trap, the Escape key,
+ * the top layer and inertness of the page behind it from the platform rather
+ * than from code of ours that would have to be got right.
  *
- * Two things decide the rest of the structure.
+ * **Two viewers, not one responsive one.** A phone already has a photo viewer
+ * and every shopper knows it: swipe sideways for the next picture, pinch to
+ * zoom, no furniture on screen. Arrows and plus/minus buttons are a mouse
+ * answering questions a finger does not ask — and they cover the picture on the
+ * screen with the least of it to spare. So below `sm` this is a scroll-snapping
+ * strip: the swipe is the browser's, the pinch is the browser's, and the only
+ * chrome is a way out and a count.
  *
- * The photograph is a plain `<img>` sized by `max-width`/`max-height` rather
- * than a filled `next/image`. A filled image's element box is the whole frame
- * whatever the picture's shape, so every click in the letterboxing either side
- * of a portrait shot lands *on the image* — which made the empty space
- * un-clickable as a way out. Sized this way the box is the picture, and
- * everything around it belongs to the backdrop and closes.
- *
- * Zoom is a bigger image inside a scrolling box, not a CSS transform. A
- * transform paints larger but leaves nothing to scroll, so a wheel over a
- * magnified photo scrolled the page behind it instead of moving the picture.
+ * A pointer has neither gesture, so from `sm` up the arrows and the zoom steps
+ * stay exactly as they were.
  */
 export function ImageLightbox({
   images,
@@ -54,15 +52,14 @@ export function ImageLightbox({
   const t = useTranslations("product");
   const ref = useRef<HTMLDialogElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement>(null);
 
-  /** 1 is fit-to-frame; above that the picture is magnified and scrolls. */
+  /** 1 fits the frame; above that the picture is magnified and scrolls. */
   const [level, setLevel] = useState(1);
-
   /** What to keep in the middle of the frame, as fractions of the picture. */
   const [origin, setOrigin] = useState({ x: 0.5, y: 0.5 });
 
   const zoomed = level > 1;
-
   const open = index !== null;
   const image = open ? images[index] : null;
 
@@ -88,6 +85,28 @@ export function ImageLightbox({
     };
   }, [open]);
 
+  /**
+   * The strip opens on the photograph that was tapped, not on the first.
+   *
+   * `instant` and only while opening: animating a jump nobody asked for reads
+   * as the viewer having opened somewhere else and then moved. It deliberately
+   * does not follow `index` afterwards — that changes as the shopper swipes,
+   * and scrolling the strip in response to their own swipe fights them.
+   */
+  const openedAt = useRef<number | null>(null);
+  useEffect(() => {
+    const el = strip.current;
+    if (!el || index === null) {
+      openedAt.current = null;
+      return;
+    }
+    if (openedAt.current === index) return;
+    openedAt.current = index;
+    el.scrollTo({ left: index * el.clientWidth, behavior: "instant" });
+    // `open` alone: this is the opening jump, not a reaction to every swipe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   // A new photo is a new thing to look at, so it starts unzoomed. Adjusted
   // during render rather than in an effect, so the incoming photo never paints
   // once at the outgoing one's magnification before snapping back.
@@ -99,8 +118,7 @@ export function ImageLightbox({
   }
 
   // Put the point that was clicked in the middle of the frame. Has to wait for
-  // the enlarged image to exist, which is why it is an effect and not part of
-  // the click handler.
+  // the enlarged image to exist, which is why it is an effect.
   useEffect(() => {
     const el = scroller.current;
     if (!el || !zoomed) return;
@@ -142,9 +160,9 @@ export function ImageLightbox({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      // Arrows move between photographs only while the picture fits. Once it
-      // is magnified they belong to the scroll box, which is what a reader
-      // expects of arrow keys over something that scrolls.
+      // Arrows move between photographs only while the picture fits. Once it is
+      // magnified they belong to the scroll box, which is what a reader expects
+      // of arrow keys over something that scrolls.
       if (!zoomed && e.key === "ArrowRight") move(1);
       if (!zoomed && e.key === "ArrowLeft") move(-1);
       if (e.key === "+" || e.key === "=") step(1);
@@ -170,6 +188,17 @@ export function ImageLightbox({
 
   const close = () => ref.current?.close();
 
+  /** Which photograph the swipe landed on, so the page behind can follow it. */
+  const onStripScroll = () => {
+    const el = strip.current;
+    if (!el || el.clientWidth === 0) return;
+    const landed = Math.round(el.scrollLeft / el.clientWidth);
+    if (landed !== index && landed >= 0 && landed < images.length) {
+      openedAt.current = landed;
+      onIndexChange(landed);
+    }
+  };
+
   return (
     <dialog
       ref={ref}
@@ -177,140 +206,188 @@ export function ImageLightbox({
       aria-label={alt}
       className={cn(
         "m-0 h-full max-h-none w-full max-w-none bg-transparent p-0",
-        "backdrop:bg-ink-950/90 backdrop:backdrop-blur-sm",
+        "backdrop:bg-ink-950/95 backdrop:backdrop-blur-sm",
       )}
     >
       {image ? (
-        <div className="flex h-full w-full flex-col">
-          <div className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-6">
-            <p className="min-w-0 truncate text-[13px] text-ink-50/80">
-              {image.alt || alt}
-              {images.length > 1 ? (
-                <span className="numeric ml-2 text-ink-50/50">
-                  {(index ?? 0) + 1}/{images.length}
-                </span>
-              ) : null}
-            </p>
-
-            <div className="flex shrink-0 items-center gap-1">
-              {/* A level, shown between its two controls, so the magnification
-                  is a value a shopper can see and return to rather than a state
-                  they have to remember they are in. */}
-              <button
-                type="button"
-                onClick={() => step(-1)}
-                disabled={level === 1}
-                aria-label={t("zoomOut")}
-                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
-              >
-                <ZoomOut className="size-5" aria-hidden="true" />
-              </button>
-
-              <span
-                aria-live="polite"
-                className="numeric w-9 text-center text-[12px] tabular-nums text-ink-50/70"
-              >
-                {level}&times;
-              </span>
-
-              <button
-                type="button"
-                onClick={() => step(1)}
-                disabled={level === MAX_ZOOM}
-                aria-label={t("zoomIn")}
-                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
-              >
-                <ZoomIn className="size-5" aria-hidden="true" />
-              </button>
-
-              <button
-                type="button"
-                onClick={close}
-                aria-label={t("closeImage")}
-                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
-              >
-                <X className="size-5" aria-hidden="true" />
-              </button>
+        <>
+          {/* ------------------------------------------------------- phone */}
+          {/*
+            A strip that snaps, which is the whole of the interaction: the swipe
+            is the browser's, and so is the pinch — the site sets no viewport
+            restriction, so two fingers magnify the picture the way they do
+            everywhere else on the phone.
+          */}
+          <div className="relative h-full w-full sm:hidden">
+            <div
+              ref={strip}
+              onScroll={onStripScroll}
+              className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-contain"
+            >
+              {images.map((img) => (
+                <div
+                  key={img.id}
+                  onClick={close}
+                  className="flex h-full w-full shrink-0 snap-center items-center justify-center p-3"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.src}
+                    alt={img.alt || alt}
+                    draggable={false}
+                    // Stops a tap on the picture closing it — only the space
+                    // around it does, the way a phone gallery behaves.
+                    onClick={(e) => e.stopPropagation()}
+                    className="max-h-full max-w-full select-none object-contain"
+                  />
+                </div>
+              ))}
             </div>
+
+            <button
+              type="button"
+              onClick={close}
+              aria-label={t("closeImage")}
+              className="absolute right-3 top-3 flex size-10 items-center justify-center rounded-full bg-ink-950/55 text-ink-50 backdrop-blur-sm"
+            >
+              <X className="size-5" aria-hidden="true" />
+            </button>
+
+            {/* Dots, not a fraction: a count of two or three is read faster as
+                shapes than as "1 / 3", and they double as the position. */}
+            {images.length > 1 ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center gap-1.5">
+                {images.map((img, i) => (
+                  <span
+                    key={img.id}
+                    className={cn(
+                      "size-1.5 rounded-full transition-colors",
+                      i === index ? "bg-ink-50" : "bg-ink-50/35",
+                    )}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          <div className="relative min-h-0 flex-1">
-            {images.length > 1 ? (
-              <Arrow side="left" label={t("previousImage")} onClick={() => move(-1)}>
-                <ChevronLeft className="size-6" aria-hidden="true" />
-              </Arrow>
-            ) : null}
+          {/* ----------------------------------------------------- pointer */}
+          <div className="hidden h-full w-full flex-col sm:flex">
+            <div className="flex shrink-0 items-center justify-between gap-4 px-4 py-3 sm:px-6">
+              <p className="min-w-0 truncate text-[13px] text-ink-50/80">
+                {image.alt || alt}
+                {images.length > 1 ? (
+                  <span className="numeric ml-2 text-ink-50/50">
+                    {(index ?? 0) + 1}/{images.length}
+                  </span>
+                ) : null}
+              </p>
 
-            {/*
-              The scrolling box, and the way out.
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => step(-1)}
+                  disabled={level === 1}
+                  aria-label={t("zoomOut")}
+                  className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+                >
+                  <ZoomOut className="size-5" aria-hidden="true" />
+                </button>
 
-              Anything in here that is not the photograph is empty space around
-              it, so a click whose target is this element — or the centring box
-              inside it — closes the viewer. `overscroll-contain` keeps a scroll
-              that reaches the edge of a zoomed picture from continuing into the
-              page underneath.
-            */}
-            <div
-              ref={scroller}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) close();
-              }}
-              className={cn(
-                "h-full w-full overscroll-contain",
-                zoomed ? "overflow-auto" : "overflow-hidden",
-              )}
-            >
+                <span
+                  aria-live="polite"
+                  className="numeric w-9 text-center text-[12px] tabular-nums text-ink-50/70"
+                >
+                  {level}&times;
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => step(1)}
+                  disabled={level === MAX_ZOOM}
+                  aria-label={t("zoomIn")}
+                  className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+                >
+                  <ZoomIn className="size-5" aria-hidden="true" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label={t("closeImage")}
+                  className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+                >
+                  <X className="size-5" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <div className="relative min-h-0 flex-1">
+              {images.length > 1 ? (
+                <Arrow side="left" label={t("previousImage")} onClick={() => move(-1)}>
+                  <ChevronLeft className="size-6" aria-hidden="true" />
+                </Arrow>
+              ) : null}
+
               <div
+                ref={scroller}
                 onClick={(e) => {
                   if (e.target === e.currentTarget) close();
                 }}
                 className={cn(
-                  // `flex` with an auto-margined child, never `justify-center`.
-                  // Centring a scroll container's content that way puts whatever
-                  // spills past the start edge outside the scrollable area —
-                  // `scrollLeft` cannot go below zero — so a magnified picture
-                  // dragged right and never left. An auto margin centres it
-                  // while it fits and keeps both overflows reachable once it
-                  // does not.
-                  "flex",
-                  zoomed ? "min-h-full min-w-full" : "h-full w-full p-4 sm:p-10",
+                  "h-full w-full overscroll-contain",
+                  zoomed ? "overflow-auto" : "overflow-hidden",
                 )}
               >
-                {/*
-                  A plain <img>, not next/image. `fill` would make the element
-                  box the whole frame, so the empty space beside a portrait shot
-                  would be part of the picture as far as a click is concerned —
-                  and that space is exactly what has to close the viewer.
-                */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  key={image.id}
-                  src={image.src}
-                  alt={image.alt || alt}
-                  onClick={toggleZoom}
-                  draggable={false}
+                <div
+                  onClick={(e) => {
+                    if (e.target === e.currentTarget) close();
+                  }}
                   className={cn(
-                    "m-auto select-none",
-                    zoomed
-                      ? "max-w-none cursor-zoom-out"
-                      : "max-h-full max-w-full cursor-zoom-in object-contain",
+                    // `flex` with an auto-margined child, never `justify-center`.
+                    // Centring a scroll container's content that way puts
+                    // whatever spills past the start edge outside the scrollable
+                    // area — `scrollLeft` cannot go below zero — so a magnified
+                    // picture dragged right and never left.
+                    "flex",
+                    zoomed ? "min-h-full min-w-full" : "h-full w-full p-4 sm:p-10",
                   )}
-                  style={zoomed ? { width: `${level * 100}%`, height: "auto" } : undefined}
-                />
+                >
+                  {/*
+                    A plain <img>, not next/image. `fill` would make the element
+                    box the whole frame, so the empty space beside a portrait
+                    shot would be part of the picture as far as a click is
+                    concerned — and that space is what has to close the viewer.
+                  */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={image.id}
+                    src={image.src}
+                    alt={image.alt || alt}
+                    onClick={toggleZoom}
+                    draggable={false}
+                    className={cn(
+                      "m-auto select-none",
+                      zoomed
+                        ? "max-w-none cursor-zoom-out"
+                        : "max-h-full max-w-full cursor-zoom-in object-contain",
+                    )}
+                    style={zoomed ? { width: `${level * 100}%`, height: "auto" } : undefined}
+                  />
+                </div>
               </div>
+
+              {images.length > 1 ? (
+                <Arrow side="right" label={t("nextImage")} onClick={() => move(1)}>
+                  <ChevronRight className="size-6" aria-hidden="true" />
+                </Arrow>
+              ) : null}
             </div>
 
-            {images.length > 1 ? (
-              <Arrow side="right" label={t("nextImage")} onClick={() => move(1)}>
-                <ChevronRight className="size-6" aria-hidden="true" />
-              </Arrow>
-            ) : null}
+            <p className="shrink-0 px-4 pb-4 text-center text-[12px] text-ink-50/45 sm:pb-6">
+              {zoomed ? t("zoomedHint") : t("zoomHint")}
+            </p>
           </div>
-
-          <p className="shrink-0 px-4 pb-4 text-center text-[12px] text-ink-50/45 sm:pb-6">
-            {zoomed ? t("zoomedHint") : t("zoomHint")}
-          </p>
-        </div>
+        </>
       ) : null}
     </dialog>
   );

@@ -100,7 +100,8 @@
     "quizLead": "有多少光、你实际上多久浇一次水、家里有没有猫。我们挑出三株合适的——并告诉你该避开哪些。",
     "quizStatQuestions": "个问题",
     "quizStatTime": "即可完成",
-    "trust1Body": "照片为凭，免费更换，绝不推诿。每件商品一次。"
+    "trust1Body": "照片为凭，免费更换，绝不推诿。每件商品一次。",
+    "newEyebrow": "新到货"
   },
   "plp": {
     "resultCount": "{count, plural, =0 {没有植物} other {# 株植物}}",

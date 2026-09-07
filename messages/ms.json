@@ -100,7 +100,8 @@
     "quizLead": "Berapa banyak cahaya, berapa kerap anda akan siram, ada kucing di rumah atau tidak. Kami senaraikan tiga yang sesuai — dan beritahu mana yang patut dielak.",
     "quizStatQuestions": "soalan",
     "quizStatTime": "untuk selesai",
-    "trust1Body": "Bukti gambar, gantian percuma, tiada pertikaian. Satu bagi setiap item."
+    "trust1Body": "Bukti gambar, gantian percuma, tiada pertikaian. Satu bagi setiap item.",
+    "newEyebrow": "Baru tiba"
   },
   "plp": {
     "resultCount": "{count, plural, =0 {Tiada pokok} other {# pokok}}",

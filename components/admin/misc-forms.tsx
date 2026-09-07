@@ -17,6 +17,7 @@ import {
 } from "@/lib/admin/catalogue-actions";
 import type { LocaleCode } from "@/lib/admin/enums";
 import { LOCALE_LABEL, LOCALES } from "@/lib/admin/enums";
+import { standardise } from "@/lib/admin/image-canvas";
 import type { ShopSettings } from "@/lib/admin/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -513,10 +514,23 @@ export function CategoryImageForm({
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const upload = (file: File | undefined) => {
-    if (!file) return;
+  const upload = (original: File | undefined) => {
+    if (!original) return;
     setError(null);
     start(async () => {
+      /*
+       * Prepared in the browser, exactly like a plant photograph.
+       *
+       * Two reasons, and the second is why this was broken. The tile is 4:5
+       * like every other frame on the storefront, so a cover wants the same
+       * canvas. And a server action's body is capped at 1 MB by default — well
+       * under the 5 MB the action itself checks for — so a cover straight out
+       * of an image generator was refused by the framework before any of our
+       * code ran, and the shopper-friendly message about size could never
+       * fire. What arrives now is a few hundred kilobytes of WebP.
+       */
+      const file = await standardise(original);
+
       const form = new FormData();
       form.set("file", file);
       form.set("categoryId", categoryId);

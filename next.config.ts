@@ -24,6 +24,18 @@ const nextConfig: NextConfig = {
 
   experimental: {
     optimizePackageImports: ["lucide-react", "motion"],
+
+    /*
+     * The uploads are prepared in the browser and arrive at a few hundred
+     * kilobytes, so this is a backstop rather than the working limit.
+     *
+     * It exists because the default is 1 MB and both upload actions check for
+     * 5 MB themselves. Anything between the two was refused by the framework
+     * with a 500 before our code ran, so the message explaining the real limit
+     * could never be shown — which is precisely how it failed. Matching the
+     * two numbers means a file too big is now told so.
+     */
+    serverActions: { bodySizeLimit: "5mb" },
   },
 };
 

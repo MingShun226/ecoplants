@@ -172,20 +172,23 @@ export default async function HomePage({
               links. */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:gap-x-8 sm:gap-y-14 lg:grid-cols-4">
             {/*
-              New arrivals, drawn as the odd one out on purpose.
+              New arrivals, when it has no cover of its own.
 
-              The other three are places — a dim corner, a bright room, a
-              balcony — and each shows a plant that lives there. This is a
-              moment rather than a condition, and there is no photograph that
-              means "recently". So it is a panel instead of a picture: the
-              shop's dark ground, the name set large, and nothing else. Sitting
-              first in a row of photographs, the absence of one is what marks
-              it out.
+              The other tiles are places, and each shows a plant that lives
+              there; this is a moment, and there is no obvious photograph of
+              "recently". So the fallback is a panel rather than a picture —
+              the shop's dark ground, the name set large — and sitting first in
+              a row of photographs the absence of one is what marks it out.
+
+              A cover uploaded in the panel wins, which is the whole point of
+              being able to upload one. Without this the tile stayed black
+              however many times it was replaced.
+
+              Rendered at all only while the category exists: deleting it
+              should take the tile with it, not leave a panel linking to a
+              filter for something that is gone.
             */}
-            {/* Only when the shop still has it. Deleting New arrivals in the
-                panel should take the tile with it, not leave a dark panel
-                linking to a filter for a category that is gone. */}
-            {newArrivals ? (
+            {newArrivals && !categoryCovers.get("new") ? (
             <RevealSection>
               <Link
                 href={categoryHref("new")}
@@ -218,7 +221,10 @@ export default async function HomePage({
             </RevealSection>
             ) : null}
 
-            {placeCategories.map((category, i) => {
+            {[
+              ...(newArrivals && categoryCovers.get("new") ? [newArrivals] : []),
+              ...placeCategories,
+            ].map((category, i) => {
               const sample = categorySamples.get(category.slug);
               const cover = categoryCovers.get(category.slug);
               return (

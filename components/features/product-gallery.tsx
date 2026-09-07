@@ -25,22 +25,19 @@ import type { Product, ProductImage } from "@/types/catalog";
  * size is not a request to stop.
  */
 /**
- * How a photograph meets its frame.
+ * How a thumbnail meets its square.
  *
- * A catalogue or lifestyle shot is *of the plant*, and filling the frame is
- * what makes a row of them read as one shelf; trimming a few centimetres of
- * studio backdrop costs nothing.
+ * The strip is square and the photographs are 4:5, so something has to give.
+ * A plant cropped to a square is still a picture of that plant; a size guide
+ * cropped to a square loses the measurements down its edge, which is the
+ * reason it was taken. So the informational kinds are fitted whole and the
+ * rest fill the square.
  *
- * A scale drawing and a detail shot are of the *information* — the pot
- * measurement down the side, the leaf join in the corner. Cropping those
- * removes the reason the photograph was taken. A size guide with its
- * dimensions cut off the edge is worse than no size guide, because a shopper
- * reads the part that survived and believes it.
+ * The main frame no longer needs this. Uploads are standardised to 4:5 before
+ * they leave the browser, so it fits every photograph whole — see below.
  */
-function fitFor(kind: ProductImage["kind"]): string {
-  return kind === "scale" || kind === "detail"
-    ? "object-contain p-2 sm:p-5"
-    : "object-cover";
+function thumbFit(kind: ProductImage["kind"]): string {
+  return kind === "scale" || kind === "detail" ? "object-contain p-1" : "object-cover";
 }
 
 export function ProductGallery({ product, alt }: { product: Product; alt: string }) {
@@ -110,7 +107,18 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
             priority
             quality={82}
             sizes="(max-width: 1024px) 100vw, 45vw"
-            className={fitFor(active.kind)}
+            /*
+             * Fitted, never filled, whatever kind it is.
+             *
+             * Uploads are put on a 4:5 canvas in the browser before they are
+             * sent, and the frame is 4:5, so for anything uploaded since then
+             * this is exactly the same result `object-cover` gave. The
+             * difference is photographs that predate it: cover silently
+             * trimmed them to fit — a few percent off the top and bottom of a
+             * plant, and the edge measurements off a size guide — where this
+             * shows the whole thing and lets the frame letterbox.
+             */
+            className="object-contain"
           />
         ) : (
           <>
@@ -176,12 +184,7 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
                     fill
                     sizes="96px"
                     quality={60}
-                    className={cn(
-                      fitFor(image.kind),
-                      // The strip is small enough that the main image's padding
-                      // would leave almost nothing to see.
-                      image.kind === "scale" || image.kind === "detail" ? "p-1" : "",
-                    )}
+                    className={thumbFit(image.kind)}
                   />
                 </button>
               </li>

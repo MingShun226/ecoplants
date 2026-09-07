@@ -4,6 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Wordmark } from "@/components/brand/logo";
 import { LeafRule } from "@/components/brand/primitives";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { SheetClose } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 
@@ -71,6 +72,20 @@ export function MobileNav({
           ))}
         </ul>
       </nav>
+
+      {/*
+        The only way to change language on a phone.
+
+        The switcher lives in the announcement strip above the header, and that
+        strip is `hidden md:block` — so on a phone the site was readable in
+        three languages with no way to ask for two of them, short of scrolling
+        the whole page to the footer. It is pinned to the bottom of the drawer
+        rather than dropped into the link list: it is a setting, not a
+        destination, and it should not compete with the nav for taps.
+      */}
+      <div className="mt-auto border-t border-border-subtle px-5 py-4">
+        <LocaleSwitcher className="px-0" />
+      </div>
     </div>
   );
 }

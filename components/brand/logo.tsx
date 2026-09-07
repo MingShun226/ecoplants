@@ -23,7 +23,14 @@ import logoMark from "@/public/brand/logo-mark.png";
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5 text-current", className)}>
+    <span
+      className={cn(
+        // `align-middle` for the places this is still used inline: without it
+        // the lockup hangs off the text baseline and rides high in its row.
+        "inline-flex items-center gap-2.5 align-middle text-current",
+        className,
+      )}
+    >
       <LeafMark className="h-full w-auto" />
       {/* Its own face, not the display one — see `--font-wordmark`. Set a step
           heavier than its text weight and a touch tighter, the way lettering is

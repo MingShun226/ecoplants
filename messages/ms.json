@@ -200,7 +200,6 @@
     "askAboutPlant": "Tanya kami tentang pokok ini",
     "variationHeading": "Tiada dua pokok yang sama",
     "reviewsHeading": "Kata pembeli",
-    "reviewsPending": "Ulasan bergambar daripada pesanan yang disahkan akan muncul di sini apabila jadual ulasan sedia.",
     "relatedHeading": "Sesuai dengan keadaan yang sama",
     "peninsularOnly": "Semenanjung Malaysia sahaja",
     "peninsularOnlyBody": "pokok ini tidak akan tahan perjalanan 7–8 hari ke Sabah atau Sarawak.",
@@ -214,7 +213,12 @@
     "zoomIn": "Zum masuk",
     "zoomOut": "Zum keluar",
     "zoomHint": "Klik gambar untuk zum, atau ruang di sekelilingnya untuk tutup.",
-    "zoomedHint": "Skrol untuk gerak. Klik gambar untuk zum keluar."
+    "zoomedHint": "Skrol untuk gerak. Klik gambar untuk zum keluar.",
+    "reviewsEmptyTitle": "Belum ada ulasan",
+    "reviewsEmptyBody": "Ulasan di sini datang daripada pesanan yang benar-benar kami hantar sahaja, jadi tiada apa-apa untuk ditunjukkan sehingga yang pertama sampai. Itulah tujuannya — tiada apa di halaman ini yang ditulis oleh kami.",
+    "reviewsEmptyCta": "Sudah beli? Beritahu kami keadaannya",
+    "relatedEmptyBody": "Belum ada pokok lain di nurseri kami yang hidup dalam keadaan yang sama. Lihat selebihnya koleksi kami.",
+    "relatedEmptyCta": "Lihat semua pokok"
   },
   "quiz": {
     "progress": "{step} / {total}",

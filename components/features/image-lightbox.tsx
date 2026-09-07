@@ -6,8 +6,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ProductImage } from "@/types/catalog";
 
-/** How much bigger than the frame a zoomed photograph is drawn. */
-const ZOOM = 2;
+/**
+ * The steps a photograph can be magnified to. 1 is "fit the frame".
+ *
+ * Discrete rather than continuous: a shopper is asking one question — are those
+ * leaf edges browning — and answers it at a step, where a slider turns a glance
+ * into an operation. Four steps is enough that the top one is grain.
+ */
+const ZOOM_LEVELS = [1, 2, 3, 4] as const;
+const MAX_ZOOM = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
 
 /**
  * The full-screen photograph.
@@ -48,8 +55,13 @@ export function ImageLightbox({
   const ref = useRef<HTMLDialogElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
 
-  /** Where in the picture the shopper zoomed, as fractions, or null when out. */
-  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  /** 1 is fit-to-frame; above that the picture is magnified and scrolls. */
+  const [level, setLevel] = useState(1);
+
+  /** What to keep in the middle of the frame, as fractions of the picture. */
+  const [origin, setOrigin] = useState({ x: 0.5, y: 0.5 });
+
+  const zoomed = level > 1;
 
   const open = index !== null;
   const image = open ? images[index] : null;
@@ -82,7 +94,8 @@ export function ImageLightbox({
   const [zoomedIndex, setZoomedIndex] = useState(index);
   if (zoomedIndex !== index) {
     setZoomedIndex(index);
-    setZoom(null);
+    setLevel(1);
+    setOrigin({ x: 0.5, y: 0.5 });
   }
 
   // Put the point that was clicked in the middle of the frame. Has to wait for
@@ -90,13 +103,13 @@ export function ImageLightbox({
   // the click handler.
   useEffect(() => {
     const el = scroller.current;
-    if (!el || !zoom) return;
+    if (!el || !zoomed) return;
     el.scrollTo({
-      left: zoom.x * el.scrollWidth - el.clientWidth / 2,
-      top: zoom.y * el.scrollHeight - el.clientHeight / 2,
+      left: origin.x * el.scrollWidth - el.clientWidth / 2,
+      top: origin.y * el.scrollHeight - el.clientHeight / 2,
       behavior: "instant",
     });
-  }, [zoom]);
+  }, [zoomed, level, origin]);
 
   const move = useCallback(
     (delta: number) => {
@@ -106,27 +119,53 @@ export function ImageLightbox({
     [index, images.length, onIndexChange],
   );
 
+  /**
+   * Change magnification, keeping what is in the middle of the frame there.
+   *
+   * Read before the level changes, because after it the scroll box has a
+   * different size and the fraction would be measured against the wrong one.
+   */
+  const step = useCallback(
+    (delta: number) => {
+      const el = scroller.current;
+      if (el && zoomed) {
+        setOrigin({
+          x: (el.scrollLeft + el.clientWidth / 2) / el.scrollWidth,
+          y: (el.scrollTop + el.clientHeight / 2) / el.scrollHeight,
+        });
+      }
+      setLevel((l) => Math.min(MAX_ZOOM, Math.max(1, l + delta)));
+    },
+    [zoomed],
+  );
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") move(1);
-      if (e.key === "ArrowLeft") move(-1);
+      // Arrows move between photographs only while the picture fits. Once it
+      // is magnified they belong to the scroll box, which is what a reader
+      // expects of arrow keys over something that scrolls.
+      if (!zoomed && e.key === "ArrowRight") move(1);
+      if (!zoomed && e.key === "ArrowLeft") move(-1);
+      if (e.key === "+" || e.key === "=") step(1);
+      if (e.key === "-" || e.key === "_") step(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, move]);
+  }, [open, move, step, zoomed]);
 
   /** Zoom towards the point clicked, so the detail stays where the eye is. */
   const toggleZoom = (e: React.MouseEvent<HTMLImageElement>) => {
-    if (zoom) {
-      setZoom(null);
+    if (zoomed) {
+      setLevel(1);
       return;
     }
     const box = e.currentTarget.getBoundingClientRect();
-    setZoom({
+    setOrigin({
       x: (e.clientX - box.left) / box.width,
       y: (e.clientY - box.top) / box.height,
     });
+    setLevel(2);
   };
 
   const close = () => ref.current?.close();
@@ -154,17 +193,34 @@ export function ImageLightbox({
             </p>
 
             <div className="flex shrink-0 items-center gap-1">
+              {/* A level, shown between its two controls, so the magnification
+                  is a value a shopper can see and return to rather than a state
+                  they have to remember they are in. */}
               <button
                 type="button"
-                onClick={() => setZoom(zoom ? null : { x: 0.5, y: 0.5 })}
-                aria-label={zoom ? t("zoomOut") : t("zoomIn")}
-                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+                onClick={() => step(-1)}
+                disabled={level === 1}
+                aria-label={t("zoomOut")}
+                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
               >
-                {zoom ? (
-                  <ZoomOut className="size-5" aria-hidden="true" />
-                ) : (
-                  <ZoomIn className="size-5" aria-hidden="true" />
-                )}
+                <ZoomOut className="size-5" aria-hidden="true" />
+              </button>
+
+              <span
+                aria-live="polite"
+                className="numeric w-9 text-center text-[12px] tabular-nums text-ink-50/70"
+              >
+                {level}&times;
+              </span>
+
+              <button
+                type="button"
+                onClick={() => step(1)}
+                disabled={level === MAX_ZOOM}
+                aria-label={t("zoomIn")}
+                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+              >
+                <ZoomIn className="size-5" aria-hidden="true" />
               </button>
 
               <button
@@ -201,7 +257,7 @@ export function ImageLightbox({
               }}
               className={cn(
                 "h-full w-full overscroll-contain",
-                zoom ? "overflow-auto" : "flex items-center justify-center overflow-hidden",
+                zoomed ? "overflow-auto" : "overflow-hidden",
               )}
             >
               <div
@@ -209,8 +265,15 @@ export function ImageLightbox({
                   if (e.target === e.currentTarget) close();
                 }}
                 className={cn(
-                  "flex items-center justify-center",
-                  zoom ? "min-h-full min-w-full" : "h-full w-full p-4 sm:p-10",
+                  // `flex` with an auto-margined child, never `justify-center`.
+                  // Centring a scroll container's content that way puts whatever
+                  // spills past the start edge outside the scrollable area —
+                  // `scrollLeft` cannot go below zero — so a magnified picture
+                  // dragged right and never left. An auto margin centres it
+                  // while it fits and keeps both overflows reachable once it
+                  // does not.
+                  "flex",
+                  zoomed ? "min-h-full min-w-full" : "h-full w-full p-4 sm:p-10",
                 )}
               >
                 {/*
@@ -227,12 +290,12 @@ export function ImageLightbox({
                   onClick={toggleZoom}
                   draggable={false}
                   className={cn(
-                    "select-none",
-                    zoom
+                    "m-auto select-none",
+                    zoomed
                       ? "max-w-none cursor-zoom-out"
                       : "max-h-full max-w-full cursor-zoom-in object-contain",
                   )}
-                  style={zoom ? { width: `${ZOOM * 100}%`, height: "auto" } : undefined}
+                  style={zoomed ? { width: `${level * 100}%`, height: "auto" } : undefined}
                 />
               </div>
             </div>
@@ -245,7 +308,7 @@ export function ImageLightbox({
           </div>
 
           <p className="shrink-0 px-4 pb-4 text-center text-[12px] text-ink-50/45 sm:pb-6">
-            {zoom ? t("zoomedHint") : t("zoomHint")}
+            {zoomed ? t("zoomedHint") : t("zoomHint")}
           </p>
         </div>
       ) : null}

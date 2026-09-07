@@ -1,4 +1,4 @@
-import { Droplet, PawPrint, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Droplet, MessageCircle, PawPrint, ShieldCheck, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -315,25 +315,65 @@ export default async function ProductPage({
         </div>
       </section>
 
+      {/*
+        A section with nothing in it reads as a section that is broken.
+
+        Both of these can legitimately be empty — a plant listed this morning
+        has no reviews, and a small catalogue has nothing else growing in the
+        same conditions — so each says why, in a panel that looks deliberate
+        rather than in a heading over a void. The old reviews line named a
+        database table at a shopper.
+      */}
       <section id="reviews" className="section-y">
         <div className="container-page">
           <DisplayHeading lead={t("reviewsHeading")} size="sm" />
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-text-secondary">
-            {t("reviewsPending")}
-          </p>
+
+          <div className="mt-6 max-w-xl rounded-xl border border-border-subtle bg-surface-sunken px-6 py-7">
+            <p className="flex items-center gap-2.5 text-[15px] font-medium">
+              <MessageCircle className="size-4 text-text-tertiary" aria-hidden="true" />
+              {t("reviewsEmptyTitle")}
+            </p>
+            <p className="mt-2.5 text-sm leading-relaxed text-text-secondary">
+              {t("reviewsEmptyBody")}
+            </p>
+            <a
+              href={whatsappUrl(settings.whatsappNumber, tr.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-1.5 text-[13px] underline-offset-4 hover:underline"
+            >
+              {t("reviewsEmptyCta")}
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </a>
+          </div>
         </div>
       </section>
 
       <section className="section-y pt-0">
         <div className="container-page">
           <DisplayHeading lead={t("relatedHeading")} size="sm" className="mb-10" />
-          <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
-            {related.map((item, i) => (
-              <RevealSection key={item.id} delay={i * 0.07}>
-                <PlantCard product={item} />
-              </RevealSection>
-            ))}
-          </div>
+          {related.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4">
+              {related.map((item, i) => (
+                <RevealSection key={item.id} delay={i * 0.07}>
+                  <PlantCard product={item} />
+                </RevealSection>
+              ))}
+            </div>
+          ) : (
+            <div className="max-w-xl rounded-xl border border-border-subtle bg-surface-sunken px-6 py-7">
+              <p className="text-sm leading-relaxed text-text-secondary">
+                {t("relatedEmptyBody")}
+              </p>
+              <Link
+                href="/plants"
+                className="mt-4 inline-flex items-center gap-1.5 text-[13px] underline-offset-4 hover:underline"
+              >
+                {t("relatedEmptyCta")}
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
     </div>

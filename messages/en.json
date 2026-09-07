@@ -200,7 +200,6 @@
     "askAboutPlant": "Ask us about this plant",
     "variationHeading": "No two plants are alike",
     "reviewsHeading": "What buyers say",
-    "reviewsPending": "Photo reviews from verified orders will appear here once the reviews table is live.",
     "relatedHeading": "Grows in similar conditions",
     "peninsularOnly": "Peninsular Malaysia only",
     "peninsularOnlyBody": "this plant will not survive the 7–8 day transit to Sabah or Sarawak.",
@@ -214,7 +213,12 @@
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "zoomHint": "Click the photo to zoom, or the space around it to close.",
-    "zoomedHint": "Scroll to move around. Click the photo to zoom out."
+    "zoomedHint": "Scroll to move around. Click the photo to zoom out.",
+    "reviewsEmptyTitle": "No reviews yet",
+    "reviewsEmptyBody": "Reviews here only come from orders we have actually delivered, so there is nothing to show until the first ones arrive. That is the point — nothing on this page is written by us.",
+    "reviewsEmptyCta": "Bought this? Tell us how it is doing",
+    "relatedEmptyBody": "Nothing else in the nursery grows in quite these conditions yet. The rest of what we have is worth a look.",
+    "relatedEmptyCta": "See every plant"
   },
   "quiz": {
     "progress": "{step} / {total}",

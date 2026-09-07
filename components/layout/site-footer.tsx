@@ -23,8 +23,7 @@ export async function SiteFooter() {
       heading: t("shopHeading"),
       links: [
         { href: "/plants", label: tn("allPlants") },
-        { href: categoryHref("indoor"), label: tn("indoor") },
-        { href: categoryHref("outdoor"), label: tn("outdoor") },
+        { href: categoryHref("new"), label: tn("newArrivals") },
         { href: categoryHref("pet-safe"), label: tn("petSafe") },
         { href: categoryHref("beginner"), label: tn("beginner") },
         { href: "/category/pots", label: tn("pots") },

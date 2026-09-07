@@ -32,13 +32,23 @@ export async function SiteHeader() {
   // Short labels in the bar, full names on the category pages themselves — a
   // nav that reads "Pet-Safe Plants" next to "Garden & Balcony" is a paragraph,
   // not a nav.
+  /*
+   * Four items, not seven.
+   *
+   * The bar used to carry every plant category. Two of them stopped earning
+   * their place once the nursery focused on balcony and garden stock: "Indoor"
+   * filters onto a list with almost nothing in it, and "Garden" filters onto
+   * nearly everything — a nav item that narrows nothing is a nav item that
+   * teaches a shopper the nav does not work.
+   *
+   * What is left is the catalogue, the two questions worth asking before
+   * buying a plant, and the finder. Both filters remain on the listing itself,
+   * where a shopper who wants them will look.
+   */
   const navItems = [
-    // The listing itself comes first. Without it the bar offered four filtered
-    // views of the catalogue and no way to see the catalogue.
     { href: "/plants", label: tn("allPlants") },
-    ...categories
-      .filter((c) => c.type === "plants")
-      .map((c) => ({ href: categoryHref(c.slug), label: tn(c.key) })),
+    { href: categoryHref("new"), label: tn("newArrivals") },
+    { href: categoryHref("pet-safe"), label: tn("petSafe") },
   ];
 
   // The search index is built here so the client gets one flat, pre-localised

@@ -18,14 +18,18 @@ import {
 /**
  * Adding a plant.
  *
- * Nine fields, and three of them fill themselves in. This asks only for what
- * has no sensible default and would be wrong to guess — what it is called, what
- * it costs, how many there are — then hands over to the detail page, which is
+ * Seven fields, and one of them fills itself in. This asks only for what has no
+ * sensible default and would be wrong to guess — what it is called, what it
+ * costs, how many there are — then hands over to the detail page, which is
  * already built for the rest.
  *
- * The reference and the web address derive from the name as it is typed, and
- * stop deriving the moment either is edited by hand. Auto-filling a field
- * someone has already corrected is worse than never filling it at all.
+ * Neither the internal reference nor the botanical name is among them. The ref
+ * is derived from the name on the server and never shown to anyone; the
+ * botanical name falls back to the English one and is edited on the detail page
+ * beside the translations, which is where someone has the plant's papers to
+ * hand. The web address still derives from the name as it is typed, and stops
+ * deriving the moment it is edited by hand: auto-filling a field someone has
+ * already corrected is worse than never filling it at all.
  */
 const SIZES = ["small", "medium", "large", "extra-large"];
 
@@ -58,9 +62,7 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
 
   const [f, setF] = useState({
     name: "",
-    ref: "",
     slug: "",
-    nameBotanical: "",
     categoryId: assignable[0]?.id ?? "",
     sizeKey: "medium",
     sku: "",
@@ -68,15 +70,14 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
     stock: "0",
   });
 
-  // Once either has been typed into, it belongs to the operator.
-  const [touched, setTouched] = useState({ ref: false, slug: false });
+  // Once it has been typed into, it belongs to the operator.
+  const [slugTouched, setSlugTouched] = useState(false);
 
   const setName = (name: string) =>
     setF((prev) => ({
       ...prev,
       name,
-      ref: touched.ref ? prev.ref : slugify(name),
-      slug: touched.slug ? prev.slug : slugify(name),
+      slug: slugTouched ? prev.slug : slugify(name),
     }));
 
   const ready = f.name.trim() !== "" && f.sku.trim() !== "" && Number(f.price) > 0;
@@ -88,8 +89,6 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
         setError(null);
         start(async () => {
           const result = await createProduct({
-            ref: f.ref,
-            nameBotanical: f.nameBotanical,
             categoryId: f.categoryId,
             name: f.name,
             slug: f.slug,
@@ -127,17 +126,6 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="nameBotanical">Botanical name</Label>
-          <Input
-            id="nameBotanical"
-            value={f.nameBotanical}
-            onChange={(e) => setF({ ...f, nameBotanical: e.target.value })}
-            placeholder="Aglaonema commutatum"
-            className="h-8 rounded-sm text-[13px]"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
           <Label htmlFor="categoryId">Category</Label>
           <Select value={f.categoryId} onValueChange={(v) => setF({ ...f, categoryId: v })}>
             <SelectTrigger id="categoryId" className="h-8 rounded-sm text-[13px]">
@@ -159,30 +147,13 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
             id="slug"
             value={f.slug}
             onChange={(e) => {
-              setTouched({ ...touched, slug: true });
+              setSlugTouched(true);
               setF({ ...f, slug: e.target.value });
             }}
             required
             className="h-8 rounded-sm text-[13px]"
           />
           <p className="truncate text-[11px] text-text-tertiary">/en/plants/{f.slug || "…"}</p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="ref">Reference</Label>
-          <Input
-            id="ref"
-            value={f.ref}
-            onChange={(e) => {
-              setTouched({ ...touched, ref: true });
-              setF({ ...f, ref: e.target.value });
-            }}
-            required
-            className="h-8 rounded-sm text-[13px]"
-          />
-          <p className="text-[11px] leading-relaxed text-text-tertiary">
-            Internal. Never shown to a shopper, and never changes.
-          </p>
         </div>
       </div>
 

@@ -520,8 +520,6 @@ function slugify(input: string): string {
 }
 
 export interface NewProductInput {
-  ref: string;
-  nameBotanical: string;
   categoryId: string;
   name: string;
   slug: string;
@@ -548,6 +546,12 @@ export interface NewProductInput {
  * order and the product is rolled back by hand if a later one fails. A
  * half-made product is worse than none: invisible in the shop, but holding its
  * ref, so the next attempt collides with something nobody can see.
+ *
+ * The ref is derived from the name here rather than typed. Nobody outside the
+ * admin ever sees it, so the create form does not ask; two plants sharing a
+ * name take the first free suffix instead of refusing the create over a value
+ * the operator has no field to correct. The botanical name is not asked for
+ * either — it starts as the English name and is corrected afterwards.
  */
 export async function createProduct(
   input: NewProductInput,
@@ -555,14 +559,14 @@ export async function createProduct(
   const denied = await guard();
   if (denied) return denied;
 
-  const ref = slugify(input.ref || input.name);
+  const base = slugify(input.name);
   const slug = slugify(input.slug || input.name);
   const name = input.name.trim();
   const sku = input.sku.trim().toUpperCase();
 
   if (!name) return { ok: false, error: "Give it a name." };
-  if (!SLUG.test(ref)) {
-    return { ok: false, error: "The reference needs to be lowercase letters, numbers and hyphens." };
+  if (!SLUG.test(base)) {
+    return { ok: false, error: "The name needs at least one letter or number in it." };
   }
   if (!SLUG.test(slug)) {
     return { ok: false, error: "The web address needs to be lowercase letters, numbers and hyphens." };
@@ -593,11 +597,25 @@ export async function createProduct(
     return { ok: false, error: "That category fills itself from the plants in it. Pick another." };
   }
 
+  // Names repeat — two pot sizes of the same plant, a restock under a tidier
+  // name. Take the first suffix nothing holds rather than refuse the create.
+  const { data: siblings } = await supabase
+    .from("products")
+    .select("ref")
+    .like("ref", `${base}%`);
+
+  const taken = new Set(((siblings ?? []) as { ref: string }[]).map((r) => r.ref));
+  let ref = base;
+  for (let n = 2; taken.has(ref); n += 1) ref = `${base}-${n}`;
+
   const { data: created, error: productError } = await supabase
     .from("products")
     .insert({
       ref,
-      name_botanical: input.nameBotanical.trim() || name,
+      // Not asked for at create time. The column is required, so it starts as
+      // the English name and is corrected on the detail page beside the
+      // translations — the screen where someone has the plant's papers to hand.
+      name_botanical: name,
       category_id: input.categoryId,
       is_active: false,
     })
@@ -608,7 +626,7 @@ export async function createProduct(
     return {
       ok: false,
       error: /duplicate|unique/i.test(productError.message)
-        ? `Something already uses the reference "${ref}".`
+        ? "Something else was saved under that name a moment ago. Try again."
         : productError.message,
     };
   }

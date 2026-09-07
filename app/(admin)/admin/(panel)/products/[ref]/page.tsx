@@ -10,6 +10,7 @@ import {
   TranslationEditor,
   VisibilityToggle,
 } from "@/components/admin/product-forms";
+import { AiAssistCard, AiAssistProvider } from "@/components/admin/ai-assist";
 import { ImageManager } from "@/components/admin/image-manager";
 import { NewArrivalControl } from "@/components/admin/misc-forms";
 import { VariantEditor } from "@/components/admin/variant-editor";
@@ -74,6 +75,11 @@ export default async function ProductDetailPage({
         </div>
       ) : null}
 
+      {/* The provider spans both columns because a draft fills the copy on the
+          left and the care attributes further down it. Server components pass
+          through a client provider untouched, so nothing below becomes a client
+          component by being wrapped here. */}
+      <AiAssistProvider>
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-6">
           {/* Photography first. It is the one thing on this screen a shopper
@@ -100,6 +106,17 @@ export default async function ProductDetailPage({
               images={product.images}
               variants={product.variants}
             />
+          </AdminCard>
+
+          <AdminCard
+            title="AI Assist"
+            lead={
+              product.images.length === 0
+                ? "Drafts the copy and care settings. Add a photo first and it reads that too."
+                : "Reads the cover photo and drafts the copy and care settings in all three languages."
+            }
+          >
+            <AiAssistCard productId={product.id} hasPhoto={product.images.length > 0} />
           </AdminCard>
 
           <AdminCard
@@ -203,6 +220,7 @@ export default async function ProductDetailPage({
           </AdminCard>
         </div>
       </div>
+      </AiAssistProvider>
     </AdminPage>
   );
 }

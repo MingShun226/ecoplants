@@ -21,6 +21,7 @@ import {
   PLACEMENTS,
   WATER_FREQUENCIES,
 } from "@/lib/admin/enums";
+import { preferDraft, useAiDraft } from "@/components/admin/ai-assist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -328,6 +329,38 @@ function TranslationForm({
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setF({ ...f, [k]: e.target.value });
 
+  /**
+   * AI Assist writes into the same fields a person types into, and leaves them
+   * unsaved. `dirty` then lights the Save button by itself, so a draft is
+   * indistinguishable from typing — which is the point. It is read and
+   * committed by hand either way.
+   *
+   * Adjusted during render rather than in an effect: React re-runs this
+   * component before touching the DOM, so the fields never paint their old
+   * values first. An effect would show the empty form, then flip it.
+   */
+  const { draft, appliedAt } = useAiDraft();
+  const [seenDraft, setSeenDraft] = useState(appliedAt);
+
+  if (appliedAt !== seenDraft) {
+    setSeenDraft(appliedAt);
+    if (draft) {
+      const d = draft.copy[locale];
+      setF((prev) => ({
+        ...prev,
+        // The slug is deliberately absent. It is a live URL the moment the
+        // product is published, and rewriting it breaks every link already
+        // shared — including the ones in a customer's WhatsApp history.
+        name: preferDraft(d.name, prev.name),
+        tagline: preferDraft(d.tagline, prev.tagline),
+        description: preferDraft(d.description, prev.description),
+        careSummary: preferDraft(d.careSummary, prev.careSummary),
+        climateNote: preferDraft(d.climateNote, prev.climateNote),
+        toxicityNote: preferDraft(d.toxicityNote, prev.toxicityNote),
+      }));
+    }
+  }
+
   const dirty =
     f.name !== initial.name ||
     f.slug !== initial.slug ||
@@ -471,6 +504,32 @@ export function AttributesForm({
     airPurifying: null,
   };
   const [f, setF] = useState(a);
+
+  // Same adjust-during-render pattern as the copy form above.
+  const { draft, appliedAt } = useAiDraft();
+  const [seenDraft, setSeenDraft] = useState(appliedAt);
+
+  if (appliedAt !== seenDraft) {
+    setSeenDraft(appliedAt);
+    if (draft) {
+      const d = draft.attributes;
+      setF((prev) => ({
+        ...prev,
+        // A care value the model could not place comes back null, and null must
+        // leave what is already there rather than blank a setting someone chose.
+        light: d.light ?? prev.light,
+        water: d.water ?? prev.water,
+        difficulty: d.difficulty ?? prev.difficulty,
+        placement: d.placement ?? prev.placement,
+        matureHeightCm: d.matureHeightCm ?? prev.matureHeightCm,
+        airPurifying: d.airPurifying,
+        // A draft can lower this to "toxic" but can never raise it to "safe":
+        // `petSafe` is typed `false | null`, and null keeps whatever a person
+        // already decided — including their verification that it is safe.
+        petSafe: d.petSafe ?? prev.petSafe,
+      }));
+    }
+  }
 
   const dirty = JSON.stringify(f) !== JSON.stringify(a);
 

@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { BotanicalPlate } from "@/components/brand/plant-image";
+import Image from "next/image";
+import authBackdrop from "@/public/images/auth-foliage.webp";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { Wordmark } from "@/components/brand/logo";
 import { RuledEyebrow } from "@/components/brand/primitives";
@@ -47,16 +48,30 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           marketing to reach the thing they came for. The compact header inside
           `main` carries the brand on small screens instead. */}
       <aside className="on-dark-tokens relative isolate hidden flex-col justify-between overflow-hidden bg-ink-950 px-7 py-8 text-text-primary sm:px-10 lg:flex lg:h-full lg:w-[46%] lg:px-14 lg:py-12 xl:w-1/2">
-        {/* Foliage as backdrop, not as a picture: oversized, bled off two
-            edges, and low-contrast, so it reads as texture behind the words
-            rather than as a plant someone forgot to crop. */}
+        {/*
+          A photograph now, where this was two generated plates.
+
+          It is a backdrop rather than a picture: shot into deep shade with the
+          light falling only on the right, so the half of the panel the words
+          sit on is close to black already. `object-cover` with the focal point
+          held right keeps the lit foliage in frame as the column narrows —
+          centring it would push the interesting half off the edge on a laptop
+          and leave the copy over the brightest part.
+
+          The scrim stays regardless. "Already dark" is not a contrast
+          guarantee across every crop at every height, and the headline is the
+          one thing here that has to stay readable.
+        */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -right-[18%] top-[-12%] h-[125%] w-[92%] opacity-[0.55]">
-            <BotanicalPlate seed="auth-left" shape="broad" ground="dark" showPot={false} />
-          </div>
-          <div className="absolute -left-[22%] bottom-[-18%] h-[78%] w-[62%] opacity-25">
-            <BotanicalPlate seed="auth-corner" shape="blade" ground="dark" showPot={false} />
-          </div>
+          <Image
+            src={authBackdrop}
+            alt=""
+            fill
+            priority
+            quality={82}
+            sizes="(min-width: 1280px) 50vw, 46vw"
+            className="object-cover object-right"
+          />
           {/* Radial rather than linear: a linear wash leaves a visible seam
               exactly where the headline sits. */}
           <div className="grain absolute inset-0 bg-[radial-gradient(120%_90%_at_18%_78%,color-mix(in_oklab,var(--color-ink-950)_92%,transparent)_0%,color-mix(in_oklab,var(--color-ink-950)_70%,transparent)_45%,transparent_100%)]" />

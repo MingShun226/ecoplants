@@ -1,8 +1,8 @@
-import { ArrowRight, ArrowUpRight, MessageCircle, PawPrint, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, ArrowUpRight, MessageCircle, PawPrint, Truck } from "lucide-react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { DisplayHeading } from "@/components/brand/display-heading";
-import { PlantImage } from "@/components/brand/plant-image";
+import { BotanicalPlate, PlantImage } from "@/components/brand/plant-image";
 import { RuledEyebrow } from "@/components/brand/primitives";
 import { CardRail } from "@/components/features/card-rail";
 import { CareLine } from "@/components/features/care";
@@ -94,13 +94,13 @@ export default async function HomePage({
    */
   const plantCategories = categories.filter((c) => c.type === "plants" && c.slug !== "new");
 
-  // One round trip for the whole catalogue; every section slices from it.
-  const [featured, petSafeAll, categoryCovers] = await Promise.all([
+  // One round trip for the whole catalogue; every section slices from it. The
+  // pet-safe rail used to be fetched here too — a query for a section that said
+  // what the category tile and the trust grid already say.
+  const [featured, categoryCovers] = await Promise.all([
     getFeaturedProducts(8),
-    getProductsByCategory("pet-safe"),
     getCategoryImages(),
   ]);
-  const petSafe = petSafeAll.slice(0, 4);
 
   // One sample plant per category tile, resolved up front — an await inside the
   // JSX map is impossible, and would be a query per tile if it were not.
@@ -117,8 +117,16 @@ export default async function HomePage({
   const [collectionFeature, ...collectionRest] = featured.slice(0, 5);
   const collectionList = collectionRest.slice(0, 4);
 
+  /*
+   * Three, not four.
+   *
+   * The guarantee had a cell here as well as the announcement bar above the
+   * header, a band of its own with the three steps spelled out, and a stat in
+   * the story. Saying one thing four times on one page does not make it four
+   * times as believable; it makes the page long enough that none of it is read.
+   * The band keeps it. This grid keeps what has nowhere else to be said.
+   */
   const trustItems = [
-    { Icon: ShieldCheck, title: t("trust1Title", { days }), body: t("trust1Body") },
     { Icon: PawPrint, title: t("trust2Title"), body: t("trust2Body") },
     { Icon: Truck, title: t("trust3Title"), body: t("trust3Body") },
     { Icon: MessageCircle, title: t("trust4Title"), body: t("trust4Body") },
@@ -178,7 +186,13 @@ export default async function HomePage({
                             sizes="(max-width: 768px) 50vw, 25vw"
                             className="transition-transform duration-[1100ms] ease-refined group-hover:scale-[1.04]"
                           />
-                        ) : null}
+                        ) : (
+                          // No cover uploaded and nothing in the category yet.
+                          // The generated plate is what the rest of the site
+                          // draws in place of a photograph, and a drawing is
+                          // better than the hole this used to leave.
+                          <BotanicalPlate seed={category.slug} shape="broad" />
+                        )}
                       </div>
 
                       {/* The name rides the image on a solid bar rather than
@@ -306,7 +320,10 @@ export default async function HomePage({
             }
           />
 
-          <CardRail count={4}>
+          {/* The count is the cards there are, not the cards asked for. Hard-coded
+              to 4, a shop with one featured plant showed "1 / 4" under a single
+              card and two arrows that went nowhere. */}
+          <CardRail count={Math.min(featured.length, 4)}>
             {featured.slice(0, 4).map((item, i) => (
               <RevealSection key={item.id} delay={i * 0.07}>
                 <PlantCard product={item} priority={i < 2} />
@@ -375,81 +392,6 @@ export default async function HomePage({
                 </li>
               ))}
             </ol>
-          </RevealSection>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------- Pet-safe */}
-      <section className="section-y">
-        <div className="container-page">
-          <SectionHead
-            lead={t("petSafeHeading")}
-            accent={t("petSafeHeadingAccent")}
-            body={t("petSafeLead")}
-            action={
-              <Button asChild variant="outline" className="px-6">
-                <Link href="/plants?pets=safe">
-                  {ta("seeAll")}
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
-              </Button>
-            }
-          />
-
-          <CardRail count={petSafe.length}>
-            {petSafe.map((item, i) => (
-              <RevealSection key={item.id} delay={i * 0.07}>
-                <PlantCard product={item} />
-              </RevealSection>
-            ))}
-          </CardRail>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ Quiz */}
-      <section className="section-y-lg border-y border-border-subtle bg-surface-sunken">
-        <div className="container-page">
-          <RevealSection>
-            <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_1fr] lg:gap-20">
-              <div className="flex flex-col items-start gap-5">
-                <RuledEyebrow>{t("quizStatQuestions")}</RuledEyebrow>
-                <DisplayHeading
-                  lead={t("quizHeading")}
-                  accent={t("quizHeadingAccent")}
-                  size="md"
-                />
-                <p className="max-w-md text-[15px] leading-relaxed text-text-secondary">
-                  {t("quizLead")}
-                </p>
-                <Button asChild size="lg" className="mt-1 px-7">
-                  <Link href="/quiz">
-                    {ta("takeQuiz")}
-                    <ArrowRight className="size-4" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-
-              {/* Hairline grid, same construction as the trust band. */}
-              <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-border-subtle bg-border-subtle">
-                {[
-                  { value: "6", label: t("quizStatQuestions") },
-                  { value: "60s", label: t("quizStatTime") },
-                  { value: "3", label: t("quizStatPicks") },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-surface px-3 py-8 text-center">
-                    <dt className="sr-only">{stat.label}</dt>
-                    <dd>
-                      <span className="numeric block font-display text-3xl leading-none text-leaf-800">
-                        {stat.value}
-                      </span>
-                      <span className="mt-2 block text-[11px] leading-snug text-text-tertiary">
-                        {stat.label}
-                      </span>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
           </RevealSection>
         </div>
       </section>

@@ -4,7 +4,16 @@ import Image from "next/image";
 import { LightIcon } from "@/components/features/care";
 import { Link } from "@/i18n/navigation";
 import { quizQuestions } from "@/lib/data/quiz";
-import heroBackdrop from "@/public/images/hero.webp";
+/*
+ * The sharper of the two backdrops.
+ *
+ * `hero.webp` is 2560x1440 in 98 KB — roughly 27 bytes per thousand pixels,
+ * which is where WebP stops resolving a leaf edge and starts smearing it. This
+ * one is smaller in pixel terms and carries five times the data per pixel, and
+ * a sharp 1672px source beats a soft 2560px one at every width this is drawn
+ * at, on a phone especially.
+ */
+import heroBackdrop from "@/public/images/hero-nursery.webp";
 
 /**
  * The hero: one message, one action, one live object.
@@ -47,7 +56,9 @@ export async function Hero() {
         fill
         // The LCP element on the site's most-visited page.
         priority
-        quality={82}
+        // Higher than the site default: this is a dark, low-contrast photograph
+        // behind white text, and banding in the gradient shows badly there.
+        quality={90}
         sizes="100vw"
         className="-z-10 object-cover"
       />

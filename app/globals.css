@@ -354,8 +354,12 @@
 
   /* Section rhythm — 96px desktop / 48px mobile minimum. Whitespace is the
      layout; density is the enemy of perceived value. */
-  --spacing-section: clamp(3rem, 1.5rem + 6vw, 7.5rem);
-  --spacing-section-lg: clamp(4rem, 2rem + 8vw, 10rem);
+  /* The minimums are what a phone gets, where every section stacks and the
+     page is read by scrolling. 3rem top and bottom put 96px of nothing between
+     each pair of sections, which on a 390px screen is a quarter of the fold
+     spent on air. Desktop is unchanged. */
+  --spacing-section: clamp(2.25rem, 0.75rem + 6vw, 7.5rem);
+  --spacing-section-lg: clamp(3rem, 1rem + 8vw, 10rem);
 }
 
 /* ============================================================================

@@ -211,7 +211,9 @@
     "reviewsEmptyBody": "Ulasan di sini datang daripada pesanan yang benar-benar kami hantar sahaja, jadi tiada apa-apa untuk ditunjukkan sehingga yang pertama sampai. Itulah tujuannya — tiada apa di halaman ini yang ditulis oleh kami.",
     "reviewsEmptyCta": "Sudah beli? Beritahu kami keadaannya",
     "relatedEmptyBody": "Belum ada pokok lain di nurseri kami yang hidup dalam keadaan yang sama. Lihat selebihnya koleksi kami.",
-    "relatedEmptyCta": "Lihat semua pokok"
+    "relatedEmptyCta": "Lihat semua pokok",
+    "addedToast": "{name} ditambah ke beg anda",
+    "addedToastAction": "Lihat beg"
   },
   "quiz": {
     "progress": "{step} / {total}",
@@ -448,7 +450,14 @@
     "gatewayNotice": "Anda akan dibawa ke gerbang pembayaran untuk melengkapkan pesanan. Kami tidak sekali-kali melihat atau menyimpan maklumat perbankan anda.",
     "placeOrder": "Buat pesanan",
     "submitNotice": "Pembayaran adalah pengganti sementara — tiada kad dicaj dan tiada wang berpindah.",
-    "placingOrder": "Membuat pesanan anda…"
+    "placingOrder": "Membuat pesanan anda…",
+    "address1Hint": "Mula menaip dan pilih jalan anda, kemudian tambah nombor unit atau rumah di hadapannya.",
+    "addressPoweredBy": "Cadangan oleh Google",
+    "createAccount": "Simpan maklumat ini untuk kali seterusnya",
+    "createAccountLead": "Membuka akaun dengan nombor dan alamat di atas, supaya anda boleh menjejak pesanan ini dan membeli dengan lebih pantas selepas ini.",
+    "choosePassword": "Pilih kata laluan",
+    "passwordHint": "Sekurang-kurangnya 8 aksara. Anda akan log masuk dengan nombor telefon dan kata laluan ini.",
+    "accountNotCreated": "Pesanan anda telah dibuat. Kami tidak dapat membuka akaun: {reason} Anda boleh membukanya kemudian di halaman akaun."
   },
   "pay": {
     "title": "Pembayaran",

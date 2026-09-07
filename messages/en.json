@@ -211,7 +211,9 @@
     "reviewsEmptyBody": "Reviews here only come from orders we have actually delivered, so there is nothing to show until the first ones arrive. That is the point — nothing on this page is written by us.",
     "reviewsEmptyCta": "Bought this? Tell us how it is doing",
     "relatedEmptyBody": "Nothing else in the nursery grows in quite these conditions yet. The rest of what we have is worth a look.",
-    "relatedEmptyCta": "See every plant"
+    "relatedEmptyCta": "See every plant",
+    "addedToast": "{name} added to your bag",
+    "addedToastAction": "View bag"
   },
   "quiz": {
     "progress": "{step} / {total}",
@@ -448,7 +450,14 @@
     "gatewayNotice": "You will be redirected to the payment gateway to complete the order. We never see or store your banking details.",
     "placeOrder": "Place order",
     "submitNotice": "Payment is a stand-in — no card is charged and no money moves.",
-    "placingOrder": "Placing your order…"
+    "placingOrder": "Placing your order…",
+    "address1Hint": "Start typing and pick your street, then add your unit or house number in front.",
+    "addressPoweredBy": "Suggestions by Google",
+    "createAccount": "Save these details for next time",
+    "createAccountLead": "Creates an account with the number and address above, so you can track this order and check out in one tap after this.",
+    "choosePassword": "Choose a password",
+    "passwordHint": "At least 8 characters. You will sign in with your phone number and this password.",
+    "accountNotCreated": "Your order is placed. We could not set up the account: {reason} You can create one later from the account page."
   },
   "pay": {
     "title": "Payment",

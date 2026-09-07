@@ -11,13 +11,17 @@ import {
   Wallet,
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { useState, useTransition } from "react";
 import { PlantImage } from "@/components/brand/plant-image";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { refreshCart, useCart } from "@/components/features/cart-provider";
 import { PhoneField } from "@/components/features/phone-field";
 import { formatPhoneInput } from "@/lib/account/phone";
+import { AddressField } from "@/components/features/address-field";
+import { claimOrder, signUp } from "@/lib/account/actions";
 import { placeOrder } from "@/lib/checkout/actions";
+import { PENINSULAR_STATES } from "@/lib/checkout/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,18 +48,6 @@ import { cn } from "@/lib/utils";
  * recomputes every price, the delivery fee and the coverage rule. The totals
  * rendered below are display only and are never what gets charged.
  */
-
-/**
- * Every state this shop delivers to. EcoPlants covers West Malaysia only, so
- * Sabah, Sarawak and Labuan are not offered at all rather than offered and then
- * refused. place_order() rejects them at the database as well, so a hand-built
- * request gets the same answer as the form.
- */
-const PENINSULAR_STATES = [
-  "Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang",
-  "Perak", "Perlis", "Pulau Pinang", "Selangor", "Terengganu",
-  "Kuala Lumpur", "Putrajaya",
-] as const;
 
 type PaymentMethod = "fpx" | "duitnow" | "ewallet" | "card";
 
@@ -84,13 +76,36 @@ export function CheckoutClient({
   const { lines, subtotalSen } = useCart();
 
   const router = useRouter();
+
+  // Controlled, because the address lookup writes into them. They stay fully
+  // editable — Google's Malaysian coverage is good in the Klang Valley and
+  // patchy off it, and a shopper must always be able to correct or ignore it.
   const [state, setState] = useState<string>("");
+  const [city, setCity] = useState("");
+  const [postcode, setPostcode] = useState("");
   // Run the prefill through the same formatter, so a returning customer sees
   // their number already grouped rather than as raw digits.
   const [phone, setPhone] = useState(() => formatPhoneInput(defaults?.phone ?? ""));
   const [payment, setPayment] = useState<PaymentMethod>("fpx");
+
+  /*
+   * Whether to keep the details as an account.
+   *
+   * Offered, not assumed. Signing in here is a phone number and a password, so
+   * an account made silently from the checkout form would be one the customer
+   * has no password for — reachable only through a reset they were never told
+   * to expect. Asking costs one tick and one field, and everything else on the
+   * form is already what the account would be made of.
+   *
+   * Only shown to a guest. A signed-in customer already has one.
+   */
+  const [wantsAccount, setWantsAccount] = useState(false);
+  const [password, setPassword] = useState("");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  /** No prefill means nobody is signed in — the page only passes it for a customer. */
+  const isGuest = !defaults;
 
   const money = (sen: number) => format.number(toMajor(sen), "currency");
 
@@ -140,6 +155,32 @@ export function CheckoutClient({
             return;
           }
 
+          /*
+           * The order first, the account second, and never the other way round.
+           *
+           * The order is the thing the customer came for and the thing that
+           * holds their plants. If making the account fails — the number is
+           * already registered, the password is too short, Supabase is having a
+           * moment — the order still stands and they carry on to payment with a
+           * note. An account is a convenience; losing an order to it would not
+           * be a trade worth making.
+           */
+          if (isGuest && wantsAccount) {
+            const created = await signUp(phone, password, field("name"));
+            if (created.ok) {
+              // Signed in as of this call, so the order can be moved onto the
+              // new account and show up in their order history.
+              await claimOrder(result.orderId);
+            } else {
+              // A toast rather than a message on this page: the next line
+              // navigates to payment, and anything rendered here goes with it.
+              // The order succeeded, so this is a note, not an error.
+              toast.warning(t("accountNotCreated", { reason: created.error }), {
+                duration: 9000,
+              });
+            }
+          }
+
           // The server already dropped the cart cookie; this tells the store to
           // look again, so the header badge empties before the page changes.
           refreshCart();
@@ -186,17 +227,77 @@ export function CheckoutClient({
                 />
               </div>
             </div>
+
+            {/* Guests only — a signed-in customer has one already. */}
+            {isGuest ? (
+              <div className="mt-6 rounded-lg border border-border-subtle bg-surface-sunken px-5 py-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={wantsAccount}
+                    onChange={(e) => setWantsAccount(e.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 accent-clay-600"
+                  />
+                  <span>
+                    <span className="block text-sm">{t("createAccount")}</span>
+                    <span className="mt-0.5 block text-[12px] leading-relaxed text-text-secondary">
+                      {t("createAccountLead")}
+                    </span>
+                  </span>
+                </label>
+
+                {wantsAccount ? (
+                  <div className="mt-4 max-w-sm">
+                    <Field
+                      id="account-password"
+                      label={t("choosePassword")}
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                    <p className="mt-2 text-[11px] leading-relaxed text-text-tertiary">
+                      {t("passwordHint")}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </Section>
 
           <Section step={2} title={t("deliveryHeading")} lead={t("deliveryLead")}>
             <div className="grid gap-5 sm:grid-cols-2">
+              {/* The street, with Google's suggestions under it. Choosing one
+                  fills the town, postcode and state below — which is most of
+                  this form, and the part a shopper on a phone gets wrong. */}
               <div className="sm:col-span-2">
-                <Field id="address1" label={t("address1")} autoComplete="address-line1" required />
+                <AddressField
+                  id="address1"
+                  label={t("address1")}
+                  hint={t("address1Hint")}
+                  onResolved={(found) => {
+                    setCity(found.city);
+                    setPostcode(found.postcode);
+                    // Null where Google returned Sabah, Sarawak or a name we do
+                    // not know. Leaving the picker alone is right: it has no
+                    // option for those, and the shopper needs to see that.
+                    if (found.state) setState(found.state);
+                  }}
+                />
               </div>
               <div className="sm:col-span-2">
                 <Field id="address2" label={t("address2")} autoComplete="address-line2" />
               </div>
-              <Field id="city" label={t("city")} autoComplete="address-level2" required />
+              <Field
+                id="city"
+                label={t("city")}
+                autoComplete="address-level2"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                required
+              />
               <Field
                 id="postcode"
                 label={t("postcode")}
@@ -204,6 +305,8 @@ export function CheckoutClient({
                 pattern="[0-9]{5}"
                 maxLength={5}
                 autoComplete="postal-code"
+                value={postcode}
+                onChange={(e) => setPostcode(e.target.value)}
                 required
               />
 

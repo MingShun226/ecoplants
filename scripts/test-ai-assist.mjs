@@ -15,6 +15,7 @@ import { test } from "node:test";
 register("./ts-alias-hook.mjs", import.meta.url);
 
 const { normaliseDraft, applyDraftCopy, preferDraft } = await import("../lib/admin/ai-assist.ts");
+const { toPeninsularState, PENINSULAR_STATES } = await import("../lib/checkout/states.ts");
 
 /** A well-formed reply, which each test then spoils in one specific way. */
 function reply(overrides = {}) {
@@ -222,4 +223,62 @@ test("copy is trimmed", () => {
     copy: { ...base.copy, en: { ...base.copy.en, name: "  Aglaonema Red  " } },
   });
   assert.equal(draft.copy.en.name, "Aglaonema Red");
+});
+
+// ------------------------------------------------ states, as Google names them --
+
+/*
+ * The checkout picker and the address lookup have to agree on one spelling.
+ *
+ * Google returns the full official name — "Wilayah Persekutuan Kuala Lumpur"
+ * for KL — and the picker offers "Kuala Lumpur". Miss the mapping and a shopper
+ * picks their own street and lands on a form insisting the state is not set,
+ * with the right answer nowhere in the list.
+ */
+
+test("the names Google actually returns map onto the picker", () => {
+  const cases = {
+    "Wilayah Persekutuan Kuala Lumpur": "Kuala Lumpur",
+    "Federal Territory of Kuala Lumpur": "Kuala Lumpur",
+    "Kuala Lumpur": "Kuala Lumpur",
+    "Wilayah Persekutuan Putrajaya": "Putrajaya",
+    "Pulau Pinang": "Pulau Pinang",
+    "Penang": "Pulau Pinang",
+    "Malacca": "Melaka",
+    "Melaka": "Melaka",
+    "Selangor Darul Ehsan": "Selangor",
+    "Johor Darul Ta'zim": "Johor",
+  };
+
+  for (const [given, expected] of Object.entries(cases)) {
+    assert.equal(toPeninsularState(given), expected, given);
+  }
+});
+
+test("case and stray whitespace do not matter", () => {
+  assert.equal(toPeninsularState("  SELANGOR  "), "Selangor");
+  assert.equal(toPeninsularState("pulau pinang"), "Pulau Pinang");
+});
+
+test("every mapped state is one the picker actually offers", () => {
+  // A mapping onto a name absent from the list would set the picker to a value
+  // it has no option for, which renders as empty and cannot be corrected.
+  for (const given of ["Penang", "Malacca", "Wilayah Persekutuan Kuala Lumpur"]) {
+    assert.ok(PENINSULAR_STATES.includes(toPeninsularState(given)), given);
+  }
+});
+
+test("the states we do not deliver to map to nothing", () => {
+  // Recognised perfectly well and deliberately absent. Null leaves the picker
+  // empty, and the picker has no option for them — which is what tells the
+  // shopper before they pay rather than after.
+  for (const given of ["Sabah", "Sarawak", "Labuan", "Wilayah Persekutuan Labuan"]) {
+    assert.equal(toPeninsularState(given), null, given);
+  }
+});
+
+test("junk maps to nothing rather than guessing", () => {
+  for (const given of ["", "   ", null, undefined, "Jakarta", "Singapore"]) {
+    assert.equal(toPeninsularState(given), null, JSON.stringify(given));
+  }
 });

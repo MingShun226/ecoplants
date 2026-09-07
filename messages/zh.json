@@ -211,7 +211,9 @@
     "reviewsEmptyBody": "这里的评价只来自我们实际送达的订单，所以在第一批送出之前不会有内容。这正是我们的用意——本页没有一句话是我们自己写的。",
     "reviewsEmptyCta": "买过了？告诉我们它长得如何",
     "relatedEmptyBody": "苗圃里暂时还没有其他生长条件相近的植物。不妨看看我们其余的品种。",
-    "relatedEmptyCta": "查看所有植物"
+    "relatedEmptyCta": "查看所有植物",
+    "addedToast": "已加入购物袋：{name}",
+    "addedToastAction": "查看购物袋"
   },
   "quiz": {
     "progress": "{step} / {total}",
@@ -448,7 +450,14 @@
     "gatewayNotice": "我们会将你转至支付网关完成订单。我们不会看到或储存你的银行资料。",
     "placeOrder": "提交订单",
     "submitNotice": "支付为占位功能——不会扣款，也不会有资金转移。",
-    "placingOrder": "正在提交订单…"
+    "placingOrder": "正在提交订单…",
+    "address1Hint": "开始输入并选择您的街道，然后在前面补上单位或门牌号。",
+    "addressPoweredBy": "地址建议来自 Google",
+    "createAccount": "保存这些资料，方便下次购买",
+    "createAccountLead": "以上面的号码和地址开设账户，方便您追踪此订单，下次结账更快。",
+    "choosePassword": "设置密码",
+    "passwordHint": "至少 8 个字符。您将使用手机号码和此密码登录。",
+    "accountNotCreated": "订单已成功下单。我们无法开设账户：{reason} 您可以稍后在账户页面开设。"
   },
   "pay": {
     "title": "支付",

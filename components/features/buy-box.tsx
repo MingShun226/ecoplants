@@ -2,6 +2,7 @@
 
 import { ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { useState } from "react";
 import { openCartDrawer, useCart } from "@/components/features/cart-provider";
 import { useSelectedVariant } from "@/components/features/variant-provider";
@@ -17,10 +18,14 @@ import type { Product, Variant } from "@/types/catalog";
  * separate product pages — the information-architecture lesson from The Sill.
  * Price, stock and dimensions all follow the selection.
  *
- * Adding writes to the cart cookie and opens the drawer, so the confirmation is
- * the basket itself rather than a toast that disappears. The price shown here
- * is display-only — the real total is always recomputed server-side at order
- * creation.
+ * Adding writes to the cart cookie and says so in a toast. It used to throw
+ * the drawer open, on the reasoning that the basket is a better confirmation
+ * than a message that disappears — which is true on a desktop, where the
+ * drawer is a panel beside the page you were reading. On a phone it is the
+ * whole screen: the shopper is interrupted, loses their place, and has to
+ * dismiss something to carry on browsing. A line that says what happened and
+ * offers the bag is enough. The price shown here is display-only — the real
+ * total is always recomputed server-side at order creation.
  */
 export function BuyBox({ product }: { product: Product }) {
   const t = useTranslations("product");
@@ -43,9 +48,13 @@ export function BuyBox({ product }: { product: Product }) {
   const onAdd = () => {
     add(variant.id);
     setAdded(true);
-    // The drawer is the confirmation. Opening it a beat later lets the button's
-    // own state change register first, so the two reads as cause and effect.
-    window.setTimeout(openCartDrawer, 180);
+
+    // Named, because a shopper adding a third plant wants to know which one
+    // landed. The action opens the drawer for anyone who does want to look.
+    toast.success(t("addedToast", { name: product.t[locale].name }), {
+      action: { label: t("addedToastAction"), onClick: openCartDrawer },
+    });
+
     window.setTimeout(() => setAdded(false), 2200);
   };
 

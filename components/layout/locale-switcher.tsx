@@ -43,7 +43,21 @@ export function LocaleSwitcher({ className }: { className?: string }) {
   }
 
   return (
-    <DropdownMenu>
+    /*
+     * `modal={false}`, which is what stops the bar jumping sideways.
+     *
+     * A Radix menu is modal by default: it locks page scroll while open, and
+     * locking removes the scrollbar. The 15px the scrollbar occupied is handed
+     * back to the viewport, everything centred in it slides, and the fixed
+     * header slides with it — a language menu is not worth moving the page for.
+     *
+     * The header already mirrors `--removed-body-scroll-bar-size` to hold
+     * itself still, which covers the width but not the reflow underneath.
+     * Not locking at all is the fix, and nothing here needed the lock:
+     * outside-click and Escape still close it, focus is still trapped inside
+     * while it is open, and a menu of three items has nothing to scroll.
+     */
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         disabled={isPending}
         className={cn(

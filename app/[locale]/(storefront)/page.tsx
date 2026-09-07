@@ -11,8 +11,9 @@ import { RevealSection } from "@/components/features/reveal-section";
 import { Button } from "@/components/ui/button";
 import { categoryHref } from "@/lib/data/facets";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import {
-  categories,
+  getCategories,
   getCategoryImages,
   getFeaturedProducts,
   getProductsByCategory,
@@ -70,7 +71,6 @@ export default async function HomePage({
   const t = await getTranslations("home");
   const ta = await getTranslations("actions");
   const tg = await getTranslations("guarantee");
-  const tc = await getTranslations("categories");
   const tcd = await getTranslations("categoryDescriptions");
   const tw = await getTranslations("whatsapp");
   const ts = await getTranslations("shipping");
@@ -97,8 +97,19 @@ export default async function HomePage({
    * between three. New arrivals leads them, deliberately unlike the other
    * three: it is a moment, not a condition, and it should not look like one.
    */
-  const placeCategories = categories.filter((c) =>
-    ["indoor", "outdoor", "pet-safe"].includes(c.slug),
+  const allCategories = await getCategories(locale as Locale);
+  const newArrivals = allCategories.find((c) => c.slug === "new");
+
+  /*
+   * The places a plant can live, in the order the panel put them.
+   *
+   * Not a fixed list of slugs any more: whatever the shop owner keeps is what
+   * shows. Derived collections are excluded because they answer a different
+   * question — "pet-safe" is a property, not a place — and New arrivals leads
+   * the row in its own treatment below.
+   */
+  const placeCategories = allCategories.filter(
+    (c) => c.type === "plants" && !c.isDerived && c.slug !== "new",
   );
 
   // One round trip for the whole catalogue; every section slices from it. The
@@ -171,6 +182,10 @@ export default async function HomePage({
               first in a row of photographs, the absence of one is what marks
               it out.
             */}
+            {/* Only when the shop still has it. Deleting New arrivals in the
+                panel should take the tile with it, not leave a dark panel
+                linking to a filter for a category that is gone. */}
+            {newArrivals ? (
             <RevealSection>
               <Link
                 href={categoryHref("new")}
@@ -189,7 +204,7 @@ export default async function HomePage({
                 </span>
                 <span className="relative">
                   <span className="block font-display text-[19px] leading-tight sm:text-2xl">
-                    {tc("newArrivals")}
+                    {newArrivals.name}
                   </span>
                   <span className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-text-secondary">
                     {ta("seeAll")}
@@ -201,6 +216,7 @@ export default async function HomePage({
                 </span>
               </Link>
             </RevealSection>
+            ) : null}
 
             {placeCategories.map((category, i) => {
               const sample = categorySamples.get(category.slug);
@@ -210,7 +226,7 @@ export default async function HomePage({
                   <Link
                     href={categoryHref(category.slug)}
                     className="group block"
-                    title={tcd(category.key)}
+                    title={tcd.has(category.slug) ? tcd(category.slug) : ""}
                   >
                     <div className="relative overflow-hidden rounded-lg border border-border-subtle transition-colors duration-500 ease-refined group-hover:border-clay-300">
                       <div className="relative aspect-4/5 w-full bg-surface-sunken">
@@ -251,7 +267,7 @@ export default async function HomePage({
                             a second line instead on the one name long enough to
                             need it. */}
                         <span className="font-display text-[13.5px] leading-tight sm:text-base">
-                          {tc(category.key)}
+                          {category.name}
                         </span>
                         <ArrowRight
                           className="size-4 shrink-0 transition-transform duration-300 ease-refined group-hover:translate-x-0.5"

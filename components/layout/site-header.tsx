@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { categoryHref } from "@/lib/data/facets";
-import { categories, getProducts } from "@/lib/data/queries";
+import { getCategories, getProducts } from "@/lib/data/queries";
 import { getSettings } from "@/lib/data/settings";
 import { toMajor } from "@/lib/utils/format";
 import { difficultyKeys, lightKeys, waterKeys } from "@/lib/data/facets";
@@ -45,10 +45,22 @@ export async function SiteHeader() {
    * buying a plant, and the finder. Both filters remain on the listing itself,
    * where a shopper who wants them will look.
    */
+  /*
+   * The catalogue, then whatever categories the panel keeps, in its order.
+   *
+   * This was a hand-picked list of three. It is the table now, so deleting a
+   * category in the panel takes it out of the bar and creating one puts it in
+   * — which is the whole point of the panel being able to.
+   *
+   * "All plants" leads regardless: without it the bar offers filtered views of
+   * the catalogue and no way to see the catalogue.
+   */
   const navItems = [
     { href: "/plants", label: tn("allPlants") },
-    { href: categoryHref("new"), label: tn("newArrivals") },
-    { href: categoryHref("pet-safe"), label: tn("petSafe") },
+    ...(await getCategories(locale)).map((c) => ({
+      href: categoryHref(c.slug),
+      label: c.name,
+    })),
   ];
 
   // The search index is built here so the client gets one flat, pre-localised

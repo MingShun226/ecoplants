@@ -60,16 +60,30 @@ export function CategoryResults({
     return record;
   }, [searchParams]);
 
+  /**
+   * A category narrows the list before anything else does.
+   *
+   * Applied here rather than as a facet because the facet groups are fixed —
+   * fixed options, fixed translated labels — and a category created in the
+   * panel this afternoon has none of those. Narrowing first also means the chip
+   * counts are counted within the category, which is what a shopper reading
+   * "Pots (3)" expects them to mean.
+   */
+  const category = searchParams.get("category");
+
   const { results, counts } = useMemo(() => {
+    const withinCategory = category
+      ? products.filter((p) => p.categorySlug === category)
+      : products;
     const selected = parseFacets(query);
     const sort = (typeof query.sort === "string" ? query.sort : "featured") as SortKey;
     return {
-      results: sortProducts(applyFacets(products, selected), sort),
+      results: sortProducts(applyFacets(withinCategory, selected), sort),
       // Counted from the same list the results come from, so the numbers on the
       // filter chips cannot drift from what the grid actually shows.
-      counts: facetCounts(products, selected),
+      counts: facetCounts(withinCategory, selected),
     };
-  }, [products, query]);
+  }, [products, query, category]);
 
   return (
     <>

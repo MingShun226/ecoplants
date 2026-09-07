@@ -152,7 +152,25 @@ export function totalStock(product: ProductBase): number {
 export interface Category {
   id: string;
   slug: string;
-  /** Message key in the `categories` namespace. */
-  key: string;
   type: "plants" | "pots" | "care" | "gifts";
+  /**
+   * Membership is computed from the plants themselves rather than assigned.
+   *
+   * "Pet-safe" is every plant whose pet-safety is verified; "New arrivals" is
+   * every plant still inside its `new_until`. Nothing is filed into them, which
+   * is why they can be removed without orphaning anything — and why a category
+   * someone creates in the panel can never be one of these.
+   */
+  isDerived: boolean;
+  /** Order in the menu, the footer and the landing tiles. */
+  position: number;
+  /**
+   * The name, already in the reader's language.
+   *
+   * Read from `category_translations` rather than from a message key. A key
+   * only exists for a category that shipped in the source; one created in the
+   * panel has copy and no key, and a shop where half the categories can be
+   * renamed and half cannot is not one anybody is in charge of.
+   */
+  name: string;
 }

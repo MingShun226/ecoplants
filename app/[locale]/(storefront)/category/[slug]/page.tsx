@@ -7,14 +7,25 @@ import { RuledEyebrow } from "@/components/brand/primitives";
 import { CategoryResults } from "@/components/features/category-results";
 import { RevealSection } from "@/components/features/reveal-section";
 import { Link } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { type Locale, routing } from "@/i18n/routing";
 import { categoryHref } from "@/lib/data/facets";
-import { categories, getCategory, getProductsByCategory } from "@/lib/data/queries";
+import { getCategories, getCategory, getProductsByCategory } from "@/lib/data/queries";
 
-export function generateStaticParams() {
-  return routing.locales.flatMap((locale) =>
-    categories.map((category) => ({ locale, slug: category.slug })),
+/**
+ * Prerendered per locale, from whatever the table holds at build time.
+ *
+ * A category created in the panel after a build has no entry here, and is
+ * rendered on demand instead — which is correct rather than a gap: the route
+ * still resolves, it just is not baked.
+ */
+export async function generateStaticParams() {
+  const all = await Promise.all(
+    routing.locales.map(async (locale) => {
+      const cats = await getCategories(locale);
+      return cats.map((category) => ({ locale, slug: category.slug }));
+    }),
   );
+  return all.flat();
 }
 
 export async function generateMetadata({
@@ -23,11 +34,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
   const { locale, slug } = await params;
-  const category = getCategory(slug);
+  const category = await getCategory(slug, locale as Locale);
   if (!category) return {};
-  const tc = await getTranslations({ locale, namespace: "categories" });
   const tcd = await getTranslations({ locale, namespace: "categoryDescriptions" });
-  return { title: tc(category.key), description: tcd(category.key) };
+  return { title: category.name, description: tcd.has(category.slug) ? tcd(category.slug) : "" };
 }
 
 /**
@@ -47,7 +57,7 @@ export default async function CategoryPage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const category = getCategory(slug);
+  const category = await getCategory(slug, locale as Locale);
   if (!category) notFound();
 
   /*
@@ -70,8 +80,6 @@ export default async function CategoryPage({
    * listing of their own — which is what the rest of this page still renders.
    */
   if (category.type === "plants") permanentRedirect(`/${locale}${categoryHref(slug)}`);
-
-  const tc = await getTranslations("categories");
   const tcd = await getTranslations("categoryDescriptions");
   const tn = await getTranslations("nav");
   const activeLocale = await getLocale();
@@ -90,15 +98,15 @@ export default async function CategoryPage({
               </Link>
             </li>
             <li aria-hidden="true">/</li>
-            <li className="text-text-secondary">{tc(category.key)}</li>
+            <li className="text-text-secondary">{category.name}</li>
           </ol>
         </nav>
 
         <RevealSection className="mt-6 flex max-w-2xl flex-col items-start gap-4">
           <RuledEyebrow>{tn("allPlants")}</RuledEyebrow>
-          <DisplayHeading as="h1" lead={tc(category.key)} size="md" />
+          <DisplayHeading as="h1" lead={category.name} size="md" />
           <p className="max-w-xl text-[15px] leading-relaxed text-text-secondary">
-            {tcd(category.key)}
+            {tcd.has(category.slug) ? tcd(category.slug) : ""}
           </p>
         </RevealSection>
 

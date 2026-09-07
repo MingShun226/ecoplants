@@ -270,19 +270,61 @@ export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
  * routes and the message keys. Their display copy lives in messages/*.json and
  * in `category_translations`; this list is the shape.
  */
-export const categories: Category[] = [
-  { id: "cat-new", slug: "new", key: "newArrivals", type: "plants" },
-  { id: "cat-indoor", slug: "indoor", key: "indoor", type: "plants" },
-  { id: "cat-outdoor", slug: "outdoor", key: "outdoor", type: "plants" },
-  { id: "cat-pet-safe", slug: "pet-safe", key: "petSafe", type: "plants" },
-  { id: "cat-beginner", slug: "beginner", key: "beginner", type: "plants" },
-  { id: "cat-pots", slug: "pots", key: "pots", type: "pots" },
-  { id: "cat-care", slug: "care", key: "care", type: "care" },
-];
+/**
+ * Every category, in the reader's language, ordered as the shop shows them.
+ *
+ * Read from the database rather than declared here. The list used to be a
+ * constant, on the reasoning that a slug is baked into routes and message keys
+ * — which was true, and meant the shop owner could not add or remove one
+ * without a deploy. Routes now resolve against whatever is in the table and
+ * names come from `category_translations`, so the panel is in charge.
+ *
+ * `cache` deduplicates it within a request: the header, the footer, the landing
+ * tiles and the sitemap all ask, and they should not be four round trips.
+ */
+async function fetchCategories(locale: Locale): Promise<Category[]> {
+  const supabase = createPublicClient();
+  const { data } = await supabase
+    .from("categories")
+    .select("id, slug, kind, position, is_derived, category_translations ( locale, name )")
+    .order("position");
 
-export function getCategory(slug: string): Category | undefined {
-  return categories.find((c) => c.slug === slug);
+  const rows = (data ?? []) as {
+    id: string;
+    slug: string;
+    kind: Category["type"];
+    position: number;
+    is_derived: boolean;
+    category_translations: { locale: string; name: string }[] | null;
+  }[];
+
+  return rows.map((row) => {
+    const copy = row.category_translations ?? [];
+    // English is the source locale everything falls back to, exactly as it is
+    // for a product. A category with no copy at all shows its slug, which is
+    // ugly and legible — better than a blank chip in the navigation.
+    const name =
+      copy.find((t) => t.locale === locale)?.name ??
+      copy.find((t) => t.locale === "en")?.name ??
+      row.slug;
+
+    return {
+      id: row.id,
+      slug: row.slug,
+      type: row.kind,
+      isDerived: row.is_derived,
+      position: row.position,
+      name,
+    };
+  });
 }
+
+export const getCategories = cache(fetchCategories);
+
+export async function getCategory(slug: string, locale: Locale): Promise<Category | undefined> {
+  return (await getCategories(locale)).find((c) => c.slug === slug);
+}
+
 
 /**
  * Cover images, keyed by slug.

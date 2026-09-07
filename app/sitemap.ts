@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
-import { categories, getProducts } from "@/lib/data/queries";
+import { getCategories, getProducts } from "@/lib/data/queries";
 import { isIndexable, siteUrl } from "@/lib/site-url";
 
 /**
@@ -48,7 +48,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry((l) => `/${l}/guarantee`, 0.5, "yearly"),
   ];
 
-  const categoryPages = categories.map((category) =>
+  // English is enough to enumerate them: `entry` expands each across locales,
+  // and only the slug is used here.
+  const categoryPages = (await getCategories("en")).map((category) =>
     entry((l) => `/${l}/category/${category.slug}`, 0.8, "weekly"),
   );
 

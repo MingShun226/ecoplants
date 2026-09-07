@@ -264,13 +264,24 @@ const CATEGORY_FACETS: Record<string, string> = {
   outdoor: "?where=outdoor",
   "pet-safe": "?pets=safe",
   beginner: "?care=beginner",
-  // Pots and soil are not plants and have no facet to land on. They go to the
-  // unfiltered listing rather than to a filter that would quietly show nothing.
-  pots: "",
-  care: "",
 };
 
-/** The listing, filtered the way this category used to be. */
+/**
+ * The listing, filtered to this category.
+ *
+ * The five above are derived — membership follows from a plant's own
+ * attributes, so each maps onto the facet that computes it and the URL says
+ * what it means. Anything else is a category products are actually filed into,
+ * including any the shop owner creates in the panel, and those filter on the
+ * filing itself.
+ *
+ * `?category=` and not a facet chip: the facet groups are a fixed list with
+ * fixed options and translated labels, and a category invented this afternoon
+ * has none of that. `CategoryResults` narrows on it before the facets run, so
+ * the chips still count and filter correctly inside the category.
+ */
 export function categoryHref(slug: string): string {
-  return `/plants${CATEGORY_FACETS[slug] ?? ""}`;
+  const derived = CATEGORY_FACETS[slug];
+  if (derived) return `/plants${derived}`;
+  return `/plants?category=${encodeURIComponent(slug)}`;
 }

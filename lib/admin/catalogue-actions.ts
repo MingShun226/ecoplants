@@ -5,6 +5,7 @@ import { getSessionAdmin } from "@/lib/admin/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/admin/actions";
 import type { LocaleCode } from "@/lib/admin/catalogue";
+import { POT_COLOR_KEYS, POT_MATERIAL_KEYS } from "@/lib/admin/enums";
 
 /**
  * Catalogue, stock, review and settings mutations.
@@ -168,6 +169,8 @@ export async function updateVariant(
   fields: {
     sku: string;
     sizeKey: string;
+    potColorKey: string;
+    potMaterialKey: string;
     priceSen: number;
     compareAtSen: number | null;
     weightGrams: number | null;
@@ -184,6 +187,14 @@ export async function updateVariant(
   }
   if (!fields.sizeKey.trim()) {
     return { ok: false, error: "A size is required — it is what the customer picks between." };
+  }
+  // The storefront renders these through a message lookup, so a key it has no
+  // word for reaches a shopper as "pot_color_key" rather than as a colour.
+  if (!(POT_COLOR_KEYS as readonly string[]).includes(fields.potColorKey)) {
+    return { ok: false, error: "That is not a pot colour the shop knows." };
+  }
+  if (!(POT_MATERIAL_KEYS as readonly string[]).includes(fields.potMaterialKey)) {
+    return { ok: false, error: "That is not a pot material the shop knows." };
   }
   if (!Number.isInteger(fields.priceSen) || fields.priceSen < 0) {
     return { ok: false, error: "Price must be a whole number of sen, zero or more." };
@@ -210,6 +221,8 @@ export async function updateVariant(
     .update({
       sku,
       size_key: fields.sizeKey.trim(),
+      pot_color_key: fields.potColorKey,
+      pot_material_key: fields.potMaterialKey,
       price_sen: fields.priceSen,
       compare_at_sen: fields.compareAtSen,
       weight_grams: fields.weightGrams,
@@ -675,8 +688,11 @@ export async function createProduct(
       product_id: product.id,
       sku,
       size_key: input.sizeKey,
-      pot_color_key: "charcoal",
-      pot_material_key: "ceramic",
+      // A plain nursery pot, which is what a plant actually arrives in. This
+      // was "charcoal ceramic" — a specific, premium pot asserted about every
+      // product nobody had told us the pot of. Corrected per variant below.
+      pot_color_key: "terracotta",
+      pot_material_key: "plastic",
       price_sen: input.priceSen,
       weight_grams: 1500,
       height_cm: 40,

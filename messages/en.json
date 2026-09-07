@@ -408,12 +408,16 @@
     "terracotta": "Terracotta",
     "cream": "Cream",
     "charcoal": "Charcoal",
-    "sand": "Sand"
+    "sand": "Sand",
+    "black": "Black",
+    "green": "Green",
+    "white": "White"
   },
   "potMaterials": {
     "terracotta": "Terracotta",
     "ceramic": "Ceramic",
-    "fibreclay": "Fibreclay"
+    "fibreclay": "Fibreclay",
+    "plastic": "Plastic"
   },
   "checkout": {
     "title": "Checkout",

@@ -408,12 +408,16 @@
     "terracotta": "陶土色",
     "cream": "米白",
     "charcoal": "炭灰",
-    "sand": "沙色"
+    "sand": "沙色",
+    "black": "黑色",
+    "green": "绿色",
+    "white": "白色"
   },
   "potMaterials": {
     "terracotta": "陶土",
     "ceramic": "陶瓷",
-    "fibreclay": "纤维黏土"
+    "fibreclay": "纤维黏土",
+    "plastic": "塑料"
   },
   "checkout": {
     "title": "结账",

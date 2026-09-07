@@ -10,6 +10,14 @@ import { formatSen } from "@/lib/admin/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { POT_COLOR_KEYS, POT_MATERIAL_KEYS } from "@/lib/admin/enums";
 import { cn } from "@/lib/utils";
 
 /**
@@ -113,6 +121,8 @@ function VariantFields({ variant }: { variant: VariantRow }) {
   const [f, setF] = useState({
     sku: variant.sku,
     sizeKey: variant.sizeKey,
+    potColorKey: variant.potColorKey ?? "terracotta",
+    potMaterialKey: variant.potMaterialKey ?? "plastic",
     price: money(variant.priceSen),
     compare: money(variant.compareAtSen),
     weight: num(variant.weightGrams),
@@ -126,6 +136,8 @@ function VariantFields({ variant }: { variant: VariantRow }) {
   const dirty =
     f.sku !== variant.sku ||
     f.sizeKey !== variant.sizeKey ||
+    f.potColorKey !== (variant.potColorKey ?? "terracotta") ||
+    f.potMaterialKey !== (variant.potMaterialKey ?? "plastic") ||
     f.price !== money(variant.priceSen) ||
     f.compare !== money(variant.compareAtSen) ||
     f.weight !== num(variant.weightGrams) ||
@@ -143,6 +155,8 @@ function VariantFields({ variant }: { variant: VariantRow }) {
           const result = await updateVariant(variant.id, {
             sku: f.sku,
             sizeKey: f.sizeKey,
+            potColorKey: f.potColorKey,
+            potMaterialKey: f.potMaterialKey,
             // Edited in ringgit because that is what a person thinks in;
             // converted to sen at the boundary (ADR 0002).
             priceSen: Math.round(Number(f.price) * 100),
@@ -168,6 +182,33 @@ function VariantFields({ variant }: { variant: VariantRow }) {
           <Field label="Size" id={`size-${variant.id}`} value={f.sizeKey} onChange={set("sizeKey")} />
           <Field label="SKU" id={`sku-${variant.id}`} value={f.sku} onChange={set("sku")} mono />
         </div>
+        {/*
+          The pot is part of what is being sold, and it was neither shown here
+          nor defaulted honestly: every product created claimed a charcoal
+          ceramic pot. A shopper reads that line under the price and expects the
+          pot in the photograph.
+        */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <PotChoice
+            label="Pot colour"
+            id={`pot-color-${variant.id}`}
+            value={f.potColorKey}
+            options={POT_COLOR_KEYS}
+            onChange={(v) => setF({ ...f, potColorKey: v })}
+          />
+          <PotChoice
+            label="Pot material"
+            id={`pot-material-${variant.id}`}
+            value={f.potMaterialKey}
+            options={POT_MATERIAL_KEYS}
+            onChange={(v) => setF({ ...f, potMaterialKey: v })}
+          />
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-text-tertiary">
+          Shown to the shopper under the price, as “Charcoal · Ceramic”. Describe the
+          pot the plant actually ships in.
+        </p>
+
         <p className="mt-2 text-[11px] leading-relaxed text-text-tertiary">
           Size is a message key — it is translated in{" "}
           <code className="text-text-secondary">messages/*.json</code> under{" "}
@@ -211,6 +252,41 @@ function VariantFields({ variant }: { variant: VariantRow }) {
         {pending ? "Saving…" : saved ? "Saved" : "Save variant"}
       </Button>
     </form>
+  );
+}
+
+/** A pot attribute. The values are message keys, so they are chosen, not typed. */
+function PotChoice({
+  label,
+  id,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id} className="text-[11px]">
+        {label}
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} className="h-8 rounded-sm text-[13px] capitalize">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o} value={o} className="capitalize">
+              {o}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 

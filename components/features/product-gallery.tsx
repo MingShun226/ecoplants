@@ -82,7 +82,23 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="group/frame relative aspect-4/5 w-full overflow-hidden rounded-xl bg-surface-sunken">
+      {/*
+        Capped by height, not width.
+
+        The frame is 4:5 and used to take the full width of its column, which on
+        a laptop makes it taller than the screen — the photograph pushed the
+        price and the size picker below the fold, so the page opened on a
+        picture and no way to buy. Constraining the *width* to what a 4:5 box
+        can be without exceeding 66svh tall keeps the ratio exact rather than
+        clamping the height and squashing it.
+
+        `svh` and not `vh`: on a phone `vh` is the viewport with the browser
+        chrome hidden, so a 100vh-relative cap is taller than what is actually
+        on screen until the address bar scrolls away. Below about 600px wide the
+        cap is wider than the screen anyway, so a phone is unaffected and shows
+        the photograph full width as before.
+      */}
+      <div className="group/frame relative mx-auto aspect-4/5 w-full max-w-[calc(66svh*0.8)] overflow-hidden rounded-xl bg-surface-sunken">
         {active ? (
           <Image
             // Keyed so a swap between two photos of different plants cannot
@@ -137,7 +153,7 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
 
       {/* One photo is not a gallery, so the strip only appears from two. */}
       {visible.length > 1 ? (
-        <ul className="grid grid-cols-4 gap-2 min-[420px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-5">
+        <ul className="mx-auto grid w-full max-w-[calc(66svh*0.8)] grid-cols-4 gap-2 min-[420px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-5">
           {visible.map((image) => {
             const current = image.id === active?.id;
             return (

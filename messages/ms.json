@@ -408,12 +408,16 @@
     "terracotta": "Terakota",
     "cream": "Krim",
     "charcoal": "Arang",
-    "sand": "Pasir"
+    "sand": "Pasir",
+    "black": "Hitam",
+    "green": "Hijau",
+    "white": "Putih"
   },
   "potMaterials": {
     "terracotta": "Terakota",
     "ceramic": "Seramik",
-    "fibreclay": "Fibreclay"
+    "fibreclay": "Fibreclay",
+    "plastic": "Plastik"
   },
   "checkout": {
     "title": "Pembayaran",

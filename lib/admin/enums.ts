@@ -32,6 +32,33 @@ export const WATER_FREQUENCIES: WaterFrequency[] = ["weekly", "fortnightly", "wh
 export const DIFFICULTIES: CareDifficulty[] = ["beginner", "easy", "moderate", "expert"];
 export const PLACEMENTS: PlantPlacement[] = ["indoor", "outdoor", "both"];
 
+/**
+ * What the plant is potted in.
+ *
+ * Message keys, not copy — the storefront looks each one up in
+ * `messages/*.json` under `potColors` and `potMaterials`, so a value invented
+ * here renders as a raw key on a live product page. Adding one means adding it
+ * in all three locales too.
+ *
+ * "Plastic" and the nursery colours exist because that is what a plant actually
+ * ships in. Before they did, every new product claimed a charcoal ceramic pot,
+ * which was a default pretending to be a fact.
+ */
+export const POT_COLOR_KEYS = [
+  "terracotta",
+  "cream",
+  "charcoal",
+  "sand",
+  "black",
+  "green",
+  "white",
+] as const;
+
+export const POT_MATERIAL_KEYS = ["plastic", "terracotta", "ceramic", "fibreclay"] as const;
+
+export type PotColorKey = (typeof POT_COLOR_KEYS)[number];
+export type PotMaterialKey = (typeof POT_MATERIAL_KEYS)[number];
+
 /** The reasons stock moves in a nursery, as chips rather than a free-text box. */
 export const ADJUST_REASONS = [
   "received",

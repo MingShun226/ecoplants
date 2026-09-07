@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -22,13 +22,6 @@ import "../globals.css";
  * Fraunces' true drawn italic is load-bearing: the roman/italic mix inside a
  * single heading (see DisplayHeading) does not work with a slanted roman.
  */
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  display: "swap",
-  axes: ["SOFT", "WONK", "opsz"],
-});
-
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -92,7 +85,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={LOCALE_HREFLANG[locale]}
-      className={`${fraunces.variable} ${inter.variable}`}
+      className={inter.variable}
     >
       <body className="min-h-dvh antialiased">
         <NextIntlClientProvider>

@@ -202,7 +202,14 @@
     "peninsularOnlyBody": "这株植物撑不过运往沙巴或砂拉越的 7–8 天路程。",
     "freeDelivery": "免运费",
     "freeDeliveryOnSize": "此尺寸适用。",
-    "illustrationNote": "插画示意 — 实拍照片即将上线"
+    "illustrationNote": "插画示意 — 实拍照片即将上线",
+    "enlargeImage": "放大图片",
+    "closeImage": "关闭",
+    "previousImage": "上一张",
+    "nextImage": "下一张",
+    "zoomIn": "放大",
+    "zoomOut": "缩小",
+    "zoomHint": "点击图片可放大，按 Esc 关闭。"
   },
   "quiz": {
     "progress": "{step} / {total}",

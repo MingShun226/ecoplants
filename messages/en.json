@@ -202,7 +202,14 @@
     "peninsularOnlyBody": "this plant will not survive the 7–8 day transit to Sabah or Sarawak.",
     "freeDelivery": "Free delivery",
     "freeDeliveryOnSize": "on this size.",
-    "illustrationNote": "Illustration — photography coming soon"
+    "illustrationNote": "Illustration — photography coming soon",
+    "enlargeImage": "Enlarge photo",
+    "closeImage": "Close",
+    "previousImage": "Previous photo",
+    "nextImage": "Next photo",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomHint": "Click the photo to zoom. Press Esc to close."
   },
   "quiz": {
     "progress": "{step} / {total}",

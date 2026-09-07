@@ -202,7 +202,14 @@
     "peninsularOnlyBody": "pokok ini tidak akan tahan perjalanan 7–8 hari ke Sabah atau Sarawak.",
     "freeDelivery": "Penghantaran percuma",
     "freeDeliveryOnSize": "untuk saiz ini.",
-    "illustrationNote": "Ilustrasi — gambar sebenar akan menyusul"
+    "illustrationNote": "Ilustrasi — gambar sebenar akan menyusul",
+    "enlargeImage": "Besarkan gambar",
+    "closeImage": "Tutup",
+    "previousImage": "Gambar sebelumnya",
+    "nextImage": "Gambar seterusnya",
+    "zoomIn": "Zum masuk",
+    "zoomOut": "Zum keluar",
+    "zoomHint": "Klik gambar untuk zum. Tekan Esc untuk tutup."
   },
   "quiz": {
     "progress": "{step} / {total}",

@@ -318,12 +318,19 @@
 
   /* Type faces. Latin faces load via next/font; the CJK fallbacks are system
      faces so the zh locale never renders in a face without glyph coverage.
-     Fraunces was kept over Playfair because the roman/italic accent pattern
-     needs a true drawn italic, and its optical-size axis holds up at display
-     sizes without going spindly. */
+
+     Display and body are the same family on purpose. This was Fraunces, whose
+     soft and wonky axes give it a hand-drawn curve — handsome on a section
+     heading, and wrong on the names of the things being sold, which a shopper
+     matches against a nursery tag, a receipt and a search result. One family
+     across both roles also means one webfont for the whole site.
+
+     Hierarchy therefore comes from size, weight and space rather than from a
+     change of face, which is why the display scale below runs as large as it
+     does and headings are tracked tighter than body copy. */
   --font-display:
-    var(--font-fraunces), "Songti SC", "Noto Serif CJK SC",
-    "Source Han Serif SC", "SimSun", ui-serif, Georgia, serif;
+    var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
   --font-sans:
     var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
     "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
@@ -386,8 +393,11 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    font-weight: 500;
-    letter-spacing: -0.005em;
+    /* A sans carries less contrast than the serif this replaced, so it takes a
+       step more weight and noticeably tighter tracking to hold the same
+       presence at display sizes. */
+    font-weight: 600;
+    letter-spacing: -0.021em;
     text-wrap: balance;
   }
 
@@ -446,9 +456,12 @@
      live*". A span rather than <em>, because this is a typographic flourish
      and not emphasis; <em> would make a screen reader stress the word. */
   .display-accent {
-    font-style: italic;
+    /* Was italic, which worked because Fraunces has a true drawn italic that
+       reads as a different voice. An italic sans is the same letterforms at a
+       slant, and next to its own roman it looks like a mistake — so the accent
+       is carried by weight instead. */
     font-weight: 400;
-    letter-spacing: -0.012em;
+    letter-spacing: -0.021em;
   }
 
   /* Token remap for chrome sitting over a dark surface it does not own — the

@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2 } from "lucide-react";
 import { BotanicalPlate, inferLeafShape } from "@/components/brand/plant-image";
+import { ImageLightbox } from "@/components/features/image-lightbox";
 import { useSelectedVariant } from "@/components/features/variant-provider";
 import { cn } from "@/lib/utils";
 import type { Product, ProductImage } from "@/types/catalog";
@@ -74,9 +76,13 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
 
   const active = visible.find((i) => i.id === activeId) ?? visible[0] ?? null;
 
+  /** Which photo the full-screen viewer is showing, or null while it is shut. */
+  const [enlarged, setEnlarged] = useState<number | null>(null);
+  const activeIndex = active ? visible.findIndex((i) => i.id === active.id) : -1;
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-4/5 w-full overflow-hidden rounded-xl bg-surface-sunken">
+      <div className="group/frame relative aspect-4/5 w-full overflow-hidden rounded-xl bg-surface-sunken">
         {active ? (
           <Image
             // Keyed so a swap between two photos of different plants cannot
@@ -98,7 +104,36 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
             </p>
           </>
         )}
+
+        {/* Over the photograph rather than beside it: the thing you want to
+            enlarge is the thing you point at. Always present for a screen
+            reader and a keyboard, and fading up on hover for a mouse. */}
+        {active ? (
+          <button
+            type="button"
+            onClick={() => setEnlarged(activeIndex < 0 ? 0 : activeIndex)}
+            aria-label={t("enlargeImage")}
+            className="absolute inset-0 flex cursor-zoom-in items-end justify-end p-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-clay-600"
+          >
+            <span className="flex size-9 items-center justify-center rounded-full bg-canvas/85 text-text-secondary opacity-0 shadow-subtle backdrop-blur-sm transition-opacity duration-200 group-hover/frame:opacity-100 group-focus-within/frame:opacity-100 motion-reduce:transition-none">
+              <Maximize2 className="size-4" aria-hidden="true" />
+            </span>
+          </button>
+        ) : null}
       </div>
+
+      <ImageLightbox
+        images={visible}
+        index={enlarged}
+        alt={alt}
+        onClose={() => setEnlarged(null)}
+        onIndexChange={(i) => {
+          setEnlarged(i);
+          // Moving in the viewer moves the page behind it, so closing does not
+          // snap back to the photo the shopper started from.
+          setActiveId(visible[i]?.id ?? null);
+        }}
+      />
 
       {/* One photo is not a gallery, so the strip only appears from two. */}
       {visible.length > 1 ? (

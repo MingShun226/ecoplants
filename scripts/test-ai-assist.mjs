@@ -14,7 +14,7 @@ import { test } from "node:test";
 
 register("./ts-alias-hook.mjs", import.meta.url);
 
-const { normaliseDraft } = await import("../lib/admin/ai-assist.ts");
+const { normaliseDraft, applyDraftCopy, preferDraft } = await import("../lib/admin/ai-assist.ts");
 
 /** A well-formed reply, which each test then spoils in one specific way. */
 function reply(overrides = {}) {
@@ -141,6 +141,78 @@ test("confidence is only true when the model actually said so", () => {
     assert.equal(draft.confident, false, `confident: ${JSON.stringify(value)}`);
   }
   assert.equal(normaliseDraft(reply()).confident, true);
+});
+
+// ------------------------------------------------- filling a locale's form --
+
+/** What a translation form holds before anyone has drafted or typed. */
+function emptyFields() {
+  return {
+    name: "",
+    slug: "thuja",
+    tagline: "",
+    description: "",
+    careSummary: "",
+    climateNote: "",
+    toxicityNote: "",
+  };
+}
+
+test("every locale gets filled, not just the tab that was open", () => {
+  // The bug this covers: the Malay and Chinese forms are mounted by a keyed
+  // remount when their tab is first clicked, long after the draft arrived. A
+  // draft applied only on arrival reached English and nothing else.
+  const base = reply();
+  const draft = normaliseDraft({
+    ...base,
+    copy: {
+      en: { ...base.copy.en, name: "Lemon Cypress" },
+      ms: { ...base.copy.en, name: "Cemara Lemon" },
+      zh: { ...base.copy.en, name: "柠檬柏" },
+    },
+  });
+
+  assert.equal(applyDraftCopy(emptyFields(), draft, "en").name, "Lemon Cypress");
+  assert.equal(applyDraftCopy(emptyFields(), draft, "ms").name, "Cemara Lemon");
+  assert.equal(applyDraftCopy(emptyFields(), draft, "zh").name, "柠檬柏");
+});
+
+test("switching back to a tab still shows the draft", () => {
+  // A tab switch remounts the form from the saved copy, so the same call has to
+  // produce the draft again from scratch — not only the first time.
+  const draft = normaliseDraft(reply());
+  const first = applyDraftCopy(emptyFields(), draft, "en");
+  const afterSwitchingBack = applyDraftCopy(emptyFields(), draft, "en");
+
+  assert.deepEqual(afterSwitchingBack, first);
+  assert.notEqual(afterSwitchingBack.name, "");
+});
+
+test("with no draft the saved copy is returned untouched", () => {
+  const fields = { ...emptyFields(), name: "Typed by hand" };
+  assert.deepEqual(applyDraftCopy(fields, null, "en"), fields);
+});
+
+test("a drafted field never clears copy someone already wrote", () => {
+  const base = reply();
+  const draft = normaliseDraft({
+    ...base,
+    copy: { ...base.copy, en: { ...base.copy.en, toxicityNote: "   " } },
+  });
+
+  const fields = { ...emptyFields(), toxicityNote: "From the supplier sheet." };
+  assert.equal(applyDraftCopy(fields, draft, "en").toxicityNote, "From the supplier sheet.");
+});
+
+test("the slug is never drafted", () => {
+  const draft = normaliseDraft(reply());
+  assert.equal(applyDraftCopy(emptyFields(), draft, "en").slug, "thuja");
+});
+
+test("preferDraft keeps what exists when the draft is blank", () => {
+  assert.equal(preferDraft("", "kept"), "kept");
+  assert.equal(preferDraft("   ", "kept"), "kept");
+  assert.equal(preferDraft("drafted", "kept"), "drafted");
 });
 
 test("copy is trimmed", () => {

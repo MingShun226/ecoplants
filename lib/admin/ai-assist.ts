@@ -139,6 +139,60 @@ export function normaliseDraft(raw: unknown): PlantDraft | null {
   };
 }
 
+// -------------------------------------------------------------- applying --
+
+/** The copy fields a translation form holds. `slug` is never drafted. */
+export interface CopyFields {
+  name: string;
+  tagline: string;
+  description: string;
+  careSummary: string;
+  climateNote: string;
+  toxicityNote: string;
+}
+
+/**
+ * Merge a drafted value over a typed one.
+ *
+ * Empty means the model had nothing to say, not that the field should be
+ * cleared — a plant whose toxicity is genuinely unknown must not wipe the note
+ * someone wrote from the supplier's sheet last month.
+ */
+export function preferDraft(drafted: string, current: string): string {
+  return drafted.trim() === "" ? current : drafted;
+}
+
+/**
+ * Lay a draft over one locale's saved copy.
+ *
+ * Used both when a translation form first mounts and when a new draft arrives.
+ * The locale tabs remount the form by key, so the Malay and Chinese forms do
+ * not exist at the moment the button is pressed — a draft that only applied on
+ * arrival would reach whichever tab happened to be open and no other, and
+ * switching away and back would rebuild the first tab without it too.
+ */
+export function applyDraftCopy<T extends CopyFields>(
+  fields: T,
+  draft: PlantDraft | null,
+  locale: LocaleCode,
+): T {
+  if (!draft) return fields;
+  const d = draft.copy[locale];
+
+  return {
+    ...fields,
+    // The slug is deliberately absent. It is a live URL the moment the product
+    // is published, and rewriting it breaks every link already shared —
+    // including the ones in a customer's WhatsApp history.
+    name: preferDraft(d.name, fields.name),
+    tagline: preferDraft(d.tagline, fields.tagline),
+    description: preferDraft(d.description, fields.description),
+    careSummary: preferDraft(d.careSummary, fields.careSummary),
+    climateNote: preferDraft(d.climateNote, fields.climateNote),
+    toxicityNote: preferDraft(d.toxicityNote, fields.toxicityNote),
+  };
+}
+
 // ---------------------------------------------------------------- request --
 
 /**

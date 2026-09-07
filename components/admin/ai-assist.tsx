@@ -54,17 +54,6 @@ export function AiAssistProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * Merge a drafted value over a typed one.
- *
- * Empty means the model had nothing to say, not that the field should be
- * cleared — a plant whose toxicity is genuinely unknown must not wipe the note
- * someone wrote from the supplier's sheet last month.
- */
-export function preferDraft(drafted: string, current: string): string {
-  return drafted.trim() === "" ? current : drafted;
-}
-
 export function AiAssistCard({
   productId,
   hasPhoto,

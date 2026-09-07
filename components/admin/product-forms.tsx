@@ -21,7 +21,8 @@ import {
   PLACEMENTS,
   WATER_FREQUENCIES,
 } from "@/lib/admin/enums";
-import { preferDraft, useAiDraft } from "@/components/admin/ai-assist";
+import { useAiDraft } from "@/components/admin/ai-assist";
+import { applyDraftCopy } from "@/lib/admin/ai-assist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -316,49 +317,55 @@ function TranslationForm({
   isNew: boolean;
 }) {
   const { pending, error, saved, run } = useSave();
-  const [f, setF] = useState({
-    name: initial.name,
-    slug: initial.slug,
-    tagline: initial.tagline ?? "",
-    description: initial.description ?? "",
-    careSummary: initial.careSummary ?? "",
-    climateNote: initial.climateNote ?? "",
-    toxicityNote: initial.toxicityNote ?? "",
-  });
-
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setF({ ...f, [k]: e.target.value });
 
   /**
    * AI Assist writes into the same fields a person types into, and leaves them
    * unsaved. `dirty` then lights the Save button by itself, so a draft is
    * indistinguishable from typing — which is the point. It is read and
    * committed by hand either way.
+   */
+  const { draft, appliedAt } = useAiDraft();
+
+  /**
+   * Seeded with the draft, not merely updated by it.
    *
-   * Adjusted during render rather than in an effect: React re-runs this
+   * The locale tabs above remount this component by key, so the Malay and
+   * Chinese forms do not exist at the moment the button is pressed. Applying a
+   * draft only as it arrives filled whichever tab was open and no other — and
+   * switching away and back rebuilt even that one empty, because a remount
+   * starts from the saved copy again.
+   */
+  const [f, setF] = useState(() =>
+    applyDraftCopy(
+      {
+        name: initial.name,
+        slug: initial.slug,
+        tagline: initial.tagline ?? "",
+        description: initial.description ?? "",
+        careSummary: initial.careSummary ?? "",
+        climateNote: initial.climateNote ?? "",
+        toxicityNote: initial.toxicityNote ?? "",
+      },
+      draft,
+      locale,
+    ),
+  );
+
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setF({ ...f, [k]: e.target.value });
+
+  /**
+   * A draft arriving while this tab is already open.
+   *
+   * Adjusted during render rather than in an effect: React re-runs the
    * component before touching the DOM, so the fields never paint their old
    * values first. An effect would show the empty form, then flip it.
    */
-  const { draft, appliedAt } = useAiDraft();
   const [seenDraft, setSeenDraft] = useState(appliedAt);
 
   if (appliedAt !== seenDraft) {
     setSeenDraft(appliedAt);
-    if (draft) {
-      const d = draft.copy[locale];
-      setF((prev) => ({
-        ...prev,
-        // The slug is deliberately absent. It is a live URL the moment the
-        // product is published, and rewriting it breaks every link already
-        // shared — including the ones in a customer's WhatsApp history.
-        name: preferDraft(d.name, prev.name),
-        tagline: preferDraft(d.tagline, prev.tagline),
-        description: preferDraft(d.description, prev.description),
-        careSummary: preferDraft(d.careSummary, prev.careSummary),
-        climateNote: preferDraft(d.climateNote, prev.climateNote),
-        toxicityNote: preferDraft(d.toxicityNote, prev.toxicityNote),
-      }));
-    }
+    if (draft) setF((prev) => applyDraftCopy(prev, draft, locale));
   }
 
   const dirty =

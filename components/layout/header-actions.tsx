@@ -224,7 +224,11 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border-subtle bg-canvas text-text-primary shadow-overlay"
+                // `on-canvas-tokens` because this panel paints its own cream
+                // ground inside a header that has remapped the ink to cream for
+                // the hero behind it. Without it the results were white on
+                // near-white — rendered, correct, and invisible until hover.
+                className="on-canvas-tokens absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border-subtle bg-canvas text-text-primary shadow-overlay"
               >
                 <SearchResults
                   results={results}
@@ -282,7 +286,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
         <SheetContent
           side="top"
           showCloseButton={false}
-          className="max-h-[85dvh] gap-0 rounded-b-2xl bg-canvas p-0 text-text-primary lg:hidden"
+          className="on-canvas-tokens max-h-[85dvh] gap-0 rounded-b-2xl bg-canvas p-0 text-text-primary lg:hidden"
         >
           <SheetTitle className="sr-only">{t("search")}</SheetTitle>
 

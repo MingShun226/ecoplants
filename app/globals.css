@@ -483,6 +483,29 @@
   /* Token remap for chrome sitting over a dark surface it does not own — the
      header floating above the hero. Without this the nav keeps the light-theme
      ink tokens and renders near-invisible on the dark ground. */
+  /*
+   * Undo `on-dark-tokens` for a light panel inside a dark region.
+   *
+   * The header remaps the ink and surface tokens while it floats over the hero,
+   * and everything inside it inherits that — including a dropdown that brings
+   * its own cream background. The result was white text on a near-white panel:
+   * the search results were rendered and correct, and invisible until a row was
+   * hovered and `--surface-sunken` gave it a dark ground to sit on.
+   *
+   * The values are the ones from the `:root` block above, restated. A panel
+   * that paints its own light surface has to restate the ink that goes on it.
+   */
+  .on-canvas-tokens {
+    --text-primary: var(--color-ink-950);
+    --text-secondary: var(--color-ink-700);
+    --text-tertiary: var(--color-ink-500);
+    --text-accent: var(--color-clay-700);
+    --surface: oklch(1 0 0);
+    --surface-sunken: oklch(0.966 0.010 82);
+    --border-subtle: oklch(0.925 0.008 80);
+    --border-default: oklch(0.878 0.012 78);
+  }
+
   .on-dark-tokens,
   .on-dark {
     --text-primary: var(--color-ink-50);

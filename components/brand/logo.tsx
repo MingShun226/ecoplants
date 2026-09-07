@@ -11,9 +11,13 @@ import logoMark from "@/public/brand/logo-mark.png";
  * monotone version on the dark hero would throw away the one thing that makes
  * it recognisable at a glance.
  *
- * The wordmark beside it stays live text in the display face, so it still
- * inherits colour from its surroundings — cream on the dark hero, ink on the
- * shop. That split is deliberate: the mark is fixed, the name adapts.
+ * The wordmark beside it stays live text, so it still inherits colour from its
+ * surroundings — cream on the dark hero, ink on the shop. That split is
+ * deliberate: the mark is fixed, the name adapts.
+ *
+ * It is set in its own face rather than the display one. The name beside the
+ * leaf is a fixed piece of artwork that happens to be text, and it should not
+ * be re-cast every time the headings are.
  *
  * `className` sets the height; the mark keeps its aspect ratio from there.
  */
@@ -21,7 +25,10 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5 text-current", className)}>
       <LeafMark className="h-full w-auto" />
-      <span className="font-display text-[1.35em] leading-none tracking-tight">
+      {/* Its own face, not the display one — see `--font-wordmark`. Set a step
+          heavier than its text weight and a touch tighter, the way lettering is
+          when it is drawn rather than typed. */}
+      <span className="font-wordmark text-[1.3em] font-medium leading-none tracking-[-0.01em]">
         EcoPlants
       </span>
     </span>

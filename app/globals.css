@@ -319,18 +319,24 @@
   /* Type faces. Latin faces load via next/font; the CJK fallbacks are system
      faces so the zh locale never renders in a face without glyph coverage.
 
-     Display and body are the same family on purpose. This was Fraunces, whose
-     soft and wonky axes give it a hand-drawn curve — handsome on a section
-     heading, and wrong on the names of the things being sold, which a shopper
-     matches against a nursery tag, a receipt and a search result. One family
-     across both roles also means one webfont for the whole site.
+     Display is Marcellus, a roman inscriptional serif — letterforms cut into
+     stone rather than drawn with a pen. It carries one weight, which is why
+     headings below are set at 400 and the two-tone accent is coloured rather
+     than lightened: a synthesised bold would round off the cut edges that are
+     the only reason to use it.
 
-     Hierarchy therefore comes from size, weight and space rather than from a
-     change of face, which is why the display scale below runs as large as it
-     does and headings are tracked tighter than body copy. */
+     Neither Latin face carries CJK glyphs, so `zh` falls through to the system
+     serifs — the right pairing for a serif display face, where the sans stack
+     would have been the wrong one. */
   --font-display:
-    var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
+    var(--font-marcellus), "Songti SC", "Noto Serif CJK SC",
+    "Source Han Serif SC", "SimSun", ui-serif, Georgia, serif;
+
+  /* The wordmark only. Kept out of the display token deliberately: the name
+     beside the leaf is artwork, and it should not move whenever the headings
+     are re-cast. */
+  --font-wordmark:
+    var(--font-zilla), "Songti SC", "Noto Serif CJK SC", ui-serif, Georgia, serif;
   --font-sans:
     var(--font-inter), "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
     "Source Han Sans SC", ui-sans-serif, system-ui, sans-serif;
@@ -397,11 +403,13 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    /* A sans carries less contrast than the serif this replaced, so it takes a
-       step more weight and noticeably tighter tracking to hold the same
-       presence at display sizes. */
-    font-weight: 600;
-    letter-spacing: -0.021em;
+    /* Marcellus ships one weight. Asking for 600 gets a browser-synthesised
+       bold, which thickens strokes by smearing them sideways and destroys the
+       cut serifs. A classical roman also wants its letters left alone rather
+       than pulled together the way a geometric sans does, so the tracking goes
+       back to about zero. */
+    font-weight: 400;
+    letter-spacing: -0.004em;
     text-wrap: balance;
   }
 
@@ -460,12 +468,16 @@
      live*". A span rather than <em>, because this is a typographic flourish
      and not emphasis; <em> would make a screen reader stress the word. */
   .display-accent {
-    /* Was italic, which worked because Fraunces has a true drawn italic that
-       reads as a different voice. An italic sans is the same letterforms at a
-       slant, and next to its own roman it looks like a mistake — so the accent
-       is carried by weight instead. */
-    font-weight: 400;
-    letter-spacing: -0.021em;
+    /* Carried by colour.
+
+       Italic first, which needed Fraunces' true drawn italic; then weight, when
+       the display face was a sans with a range. Marcellus has neither a second
+       weight nor an italic, so the second half of a heading steps back in the
+       ink instead — which is what the eye reads as a change of voice anyway.
+       Overridden per-use where a heading sits on a dark ground and takes the
+       sage instead. */
+    color: var(--text-secondary);
+    letter-spacing: -0.004em;
   }
 
   /* Token remap for chrome sitting over a dark surface it does not own — the

@@ -110,7 +110,10 @@ export async function SiteFooter() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 sm:gap-8">
             {columns.map((column) => (
               <div key={column.heading}>
-                <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] text-text-tertiary">
+                {/* A directory label, not a display heading. Explicitly the
+                    sans: it inherits the display face from the h2 rule, and
+                    Marcellus has no medium weight to give it. */}
+                <h2 className="font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-text-tertiary">
                   {column.heading}
                 </h2>
                 {/* `inline-block` plus vertical padding, rather than a bigger

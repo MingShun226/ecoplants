@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Marcellus, Zilla_Slab } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -11,8 +11,9 @@ import { AppProviders } from "./providers";
 import "../globals.css";
 
 /**
- * Fraunces for display, Inter for interface — one display voice, one UI voice,
- * no third face.
+ * Marcellus for display, Inter for interface, Zilla Slab for the wordmark alone
+ * — one display voice, one UI voice, and one fixed piece of lettering that
+ * belongs to the logo rather than to the page.
  *
  * Neither carries CJK glyphs, so the font stack in globals.css falls back to
  * system CJK faces (PingFang SC / Microsoft YaHei / Noto Sans CJK) for the `zh`
@@ -25,6 +26,37 @@ import "../globals.css";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+});
+
+/**
+ * The display face: Marcellus, a roman inscriptional serif.
+ *
+ * One weight, and that is the point rather than a limitation — the letterforms
+ * are cut, not drawn, and a synthesised bold would smear the very thing that
+ * makes them worth using. Everywhere the old face leaned on weight for emphasis
+ * now leans on size, space or colour instead.
+ */
+const marcellus = Marcellus({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-marcellus",
+  display: "swap",
+});
+
+/**
+ * The wordmark, and only the wordmark.
+ *
+ * Its own face rather than the display one: the name beside the leaf is a fixed
+ * piece of artwork that happens to be live text, and it should not be re-cast
+ * every time the headings are. Zilla Slab's square feet hold at the sizes a
+ * logo is actually worn — a phone header, a browser tab, a delivery label —
+ * where the display serif's fine strokes start to disappear.
+ */
+const zillaSlab = Zilla_Slab({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-zilla",
   display: "swap",
 });
 
@@ -85,7 +117,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={LOCALE_HREFLANG[locale]}
-      className={inter.variable}
+      className={`${inter.variable} ${marcellus.variable} ${zillaSlab.variable}`}
     >
       <body className="min-h-dvh antialiased">
         <NextIntlClientProvider>

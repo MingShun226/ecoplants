@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BotanicalPlate, inferLeafShape } from "@/components/brand/plant-image";
 import { useSelectedVariant } from "@/components/features/variant-provider";
 import { cn } from "@/lib/utils";
-import type { Product } from "@/types/catalog";
+import type { Product, ProductImage } from "@/types/catalog";
 
 /**
  * The PDP photograph, tied to the chosen variant.
@@ -22,6 +22,25 @@ import type { Product } from "@/types/catalog";
  * the shopper was looking at the leaf detail for a reason, and changing pot
  * size is not a request to stop.
  */
+/**
+ * How a photograph meets its frame.
+ *
+ * A catalogue or lifestyle shot is *of the plant*, and filling the frame is
+ * what makes a row of them read as one shelf; trimming a few centimetres of
+ * studio backdrop costs nothing.
+ *
+ * A scale drawing and a detail shot are of the *information* — the pot
+ * measurement down the side, the leaf join in the corner. Cropping those
+ * removes the reason the photograph was taken. A size guide with its
+ * dimensions cut off the edge is worse than no size guide, because a shopper
+ * reads the part that survived and believes it.
+ */
+function fitFor(kind: ProductImage["kind"]): string {
+  return kind === "scale" || kind === "detail"
+    ? "object-contain p-2 sm:p-5"
+    : "object-cover";
+}
+
 export function ProductGallery({ product, alt }: { product: Product; alt: string }) {
   const t = useTranslations("product");
   const { variantId } = useSelectedVariant();
@@ -69,7 +88,7 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
             priority
             quality={82}
             sizes="(max-width: 1024px) 100vw, 45vw"
-            className="object-cover"
+            className={fitFor(active.kind)}
           />
         ) : (
           <>
@@ -83,7 +102,7 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
 
       {/* One photo is not a gallery, so the strip only appears from two. */}
       {visible.length > 1 ? (
-        <ul className="grid grid-cols-5 gap-2 sm:grid-cols-6 lg:grid-cols-5">
+        <ul className="grid grid-cols-4 gap-2 min-[420px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-5">
           {visible.map((image) => {
             const current = image.id === active?.id;
             return (
@@ -106,7 +125,12 @@ export function ProductGallery({ product, alt }: { product: Product; alt: string
                     fill
                     sizes="96px"
                     quality={60}
-                    className="object-cover"
+                    className={cn(
+                      fitFor(image.kind),
+                      // The strip is small enough that the main image's padding
+                      // would leave almost nothing to see.
+                      image.kind === "scale" || image.kind === "detail" ? "p-1" : "",
+                    )}
                   />
                 </button>
               </li>

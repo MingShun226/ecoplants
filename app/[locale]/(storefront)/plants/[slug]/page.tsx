@@ -164,9 +164,24 @@ export default async function ProductPage({
               <PetSafetyBadge petSafe={product.attributes.petSafe} />
             </div>
 
-            <DisplayHeading as="h1" lead={tr.name} size="sm" className="mt-5" />
+            {/*
+              The one heading on the site not set in the display face.
 
-            <p className="mt-2 font-display text-lg italic text-text-tertiary">
+              Fraunces is drawn soft and wonky on purpose, which suits a section
+              heading and fights a product name — the name is a label a shopper
+              matches against a nursery tag, a receipt and a search result, so it
+              wants the plainest letterforms on the page rather than the most
+              characteristic. The sans is already loaded for body copy, so this
+              costs nothing to render.
+            */}
+            <DisplayHeading
+              as="h1"
+              lead={tr.name}
+              size="sm"
+              className="mt-5 font-sans font-semibold tracking-[-0.02em]"
+            />
+
+            <p className="mt-2 font-sans text-lg italic text-text-tertiary">
               {product.nameBotanical}
             </p>
 

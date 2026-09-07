@@ -1,18 +1,16 @@
-import { ArrowRight, ArrowUpRight, MessageCircle, PawPrint, Truck } from "lucide-react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { ArrowRight, MessageCircle, PawPrint, Truck } from "lucide-react";
+import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { BotanicalPlate, PlantImage } from "@/components/brand/plant-image";
 import { RuledEyebrow } from "@/components/brand/primitives";
 import { CardRail } from "@/components/features/card-rail";
-import { CareLine } from "@/components/features/care";
 import { Hero } from "@/components/features/hero";
 import { PlantCard } from "@/components/features/plant-card";
 import { RevealSection } from "@/components/features/reveal-section";
 import { Button } from "@/components/ui/button";
 import { categoryHref } from "@/lib/data/facets";
 import { Link } from "@/i18n/navigation";
-import type { Locale } from "@/i18n/routing";
 import {
   categories,
   getCategoryImages,
@@ -21,7 +19,6 @@ import {
 } from "@/lib/data/queries";
 import { getSettings, whatsappUrl } from "@/lib/data/settings";
 import { toMajor } from "@/lib/utils/format";
-import { fromPriceSen } from "@/types/catalog";
 
 /**
  * The landing page below the hero.
@@ -79,7 +76,6 @@ export default async function HomePage({
   const ts = await getTranslations("shipping");
   const tp = await getTranslations("product");
   const format = await getFormatter();
-  const activeLocale = (await getLocale()) as Locale;
 
   /**
    * The board below the hero asks "where will it live?", so it holds the
@@ -122,12 +118,6 @@ export default async function HomePage({
       ),
     ),
   );
-  // One feature panel plus a ledger of four. A list beside a single image is
-  // calmer than five tiles fighting for asymmetry, and holds more information
-  // per pixel.
-  const [collectionFeature, ...collectionRest] = featured.slice(0, 5);
-  const collectionList = collectionRest.slice(0, 4);
-
   /*
    * Three, not four.
    *
@@ -276,96 +266,6 @@ export default async function HomePage({
           </div>
         </div>
       </section>
-
-      {/* ---------------------------------------- Collection (panel + ledger) */}
-      {collectionFeature && collectionList.length > 0 ? (
-        <section className="section-y border-t border-border-subtle bg-surface-sunken">
-          <div className="container-page">
-            <SectionHead
-              lead={t("collectionHeading")}
-              accent={t("collectionHeadingAccent")}
-              body={t("collectionLead")}
-            />
-
-            <RevealSection className="grid gap-6 lg:grid-cols-12">
-              {/* Feature panel — the one editorial image of the section. */}
-              <Link
-                href={`/plants/${collectionFeature.t[activeLocale].slug}`}
-                className="group on-dark relative isolate flex min-h-[22rem] flex-col justify-end overflow-hidden rounded-xl p-8 lg:col-span-7 lg:min-h-[26rem]"
-              >
-                <div className="absolute inset-0 -z-10">
-                  <PlantImage
-                    product={collectionFeature}
-                    ground="dark"
-                    sizes="(min-width: 1024px) 58vw, 100vw"
-                    className="transition-transform duration-[1200ms] ease-refined group-hover:scale-[1.04]"
-                  />
-                </div>
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 -z-10 bg-gradient-to-t from-ink-950/85 via-ink-950/25 to-transparent"
-                />
-                <h3 className="font-display text-2xl text-ink-50 md:text-3xl">
-                  {collectionFeature.t[activeLocale].name}
-                </h3>
-                <p className="mt-2 max-w-sm text-sm leading-relaxed text-ink-200">
-                  {collectionFeature.t[activeLocale].tagline}
-                </p>
-                <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-ink-50 px-5 py-2.5 text-xs font-medium text-ink-950 transition-colors duration-300 group-hover:bg-leaf-300">
-                  {ta("viewDetails")}
-                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                </span>
-              </Link>
-
-              {/* The ledger — four rows, hairline-divided, price on the right.
-                  Same content as four large tiles, a quarter the ink. */}
-              {/*
-                `self-start`, and rows that size to their content.
-
-                Grid items stretch by default, so the ledger was as tall as the
-                feature panel beside it and its rows carried `flex-1` to fill
-                that height. With four rows that reads as a list; with two it
-                spread a 64px thumbnail over half a screen of nothing. Its own
-                height instead, sitting at the top of the column, which is
-                right at any number of rows.
-              */}
-              <div className="flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface lg:col-span-5 lg:self-start">
-                {collectionList.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/plants/${item.t[activeLocale].slug}`}
-                    className="group flex items-center gap-5 border-b border-border-subtle px-5 py-5 transition-colors duration-300 last:border-b-0 hover:bg-surface-sunken"
-                  >
-                    <span className="relative size-16 shrink-0 overflow-hidden rounded-md border border-border-subtle">
-                      <PlantImage product={item} sizes="64px" />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-[14.5px] transition-colors duration-300 group-hover:text-clay-800">
-                        {item.t[activeLocale].name}
-                      </span>
-                      {/* This row is the dense one — thumbnail, name, price.
-                          On a phone there is not enough width left for care
-                          detail without it wrapping into a three-line block
-                          that defeats the point of a ledger. It is on the card
-                          and the product page, where there is room for it. */}
-                      <CareLine attributes={item.attributes} className="hidden sm:flex" />
-                    </span>
-                    <span className="flex shrink-0 items-center gap-3">
-                      <span className="numeric text-[14.5px] font-medium">
-                        {format.number(toMajor(fromPriceSen(item)), "currency")}
-                      </span>
-                      <ArrowUpRight
-                        className="size-3.5 -translate-x-1 text-clay-600 opacity-0 transition-all duration-300 ease-refined group-hover:translate-x-0 group-hover:opacity-100"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </RevealSection>
-          </div>
-        </section>
-      ) : null}
 
       {/* --------------------------------------------------------- Featured */}
       <section className="section-y">

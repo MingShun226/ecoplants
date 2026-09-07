@@ -49,53 +49,110 @@ const KINDS: { value: ImageKind; label: string }[] = [
 const ALL_VARIANTS = "__all__";
 
 /**
- * Shrink a photo in the browser before it is uploaded.
+ * Put every photo on the same canvas before it is uploaded.
  *
- * A photo off a phone is routinely 4000px wide and 6 MB, which the 5 MB limit
- * refuses outright — leaving the one person who has the photographs unable to
- * put them in the shop. Nothing on the storefront is served larger than about
- * 1200px, so the pixels being refused were never going to be seen.
+ * Two jobs, done in one pass because both need the pixels decoded anyway.
+ *
+ * **One shape.** The storefront draws every photograph in a 4:5 frame. Left to
+ * themselves, uploads are whatever shape the camera or the supplier's size
+ * guide happened to be, so one plant filled its frame and the next sat in a
+ * band of empty space — and a row of cards read as a jumble rather than a
+ * shelf. Each photo is now fitted whole onto a 4:5 canvas and the leftover is
+ * filled with the photo's own background colour, sampled from its corners, so
+ * the padding is invisible on the white and grey backdrops a catalogue shot
+ * actually uses. Fitted, never cropped: a size guide loses its measurements the
+ * moment something trims its edges.
+ *
+ * **Fewer pixels.** A photo off a phone is routinely 4000px wide and 6 MB,
+ * which the 5 MB limit refuses outright — leaving the one person who has the
+ * photographs unable to put them in the shop. Nothing on the storefront is
+ * served larger than about 1200px, so the pixels being refused were never going
+ * to be seen.
  *
  * `imageOrientation: "from-image"` is not optional. A canvas ignores the EXIF
  * rotation flag that phones write instead of rotating the pixels, so without it
  * every portrait photo taken on a phone uploads on its side.
  *
- * Every failure path returns the original file. A photo that uploads at full
- * size is a slow page; a photo that does not upload is not a product.
+ * Every failure path returns the original file. An oddly shaped photo is a
+ * blemish; a photo that will not upload is not a product.
  */
-const MAX_EDGE = 2000;
-const SHRINK_ABOVE_BYTES = 1_200_000;
+const TARGET_W = 1600;
+const TARGET_H = 2000;
 
-async function shrink(file: File): Promise<File> {
+/** How far two corners may differ and still count as one flat backdrop. */
+const FLAT_BACKDROP_TOLERANCE = 12;
+
+/**
+ * The colour to pad with: the photo's own backdrop where it has one.
+ *
+ * Corners are sampled rather than the average of the whole picture, which on a
+ * plant would return a muddy green. Where the corners disagree — a lifestyle
+ * shot with a room in it — there is no backdrop to match, and white is the
+ * honest choice over a colour that belongs to no part of the image.
+ */
+function backdropOf(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): string {
+  try {
+    const corners = [
+      [x + 1, y + 1],
+      [x + w - 2, y + 1],
+      [x + 1, y + h - 2],
+      [x + w - 2, y + h - 2],
+    ].map(([cx, cy]) => Array.from(ctx.getImageData(cx, cy, 1, 1).data.slice(0, 3)));
+
+    const mean = [0, 1, 2].map((i) => corners.reduce((sum, c) => sum + c[i], 0) / corners.length);
+    const flat = corners.every((c) => c.every((v, i) => Math.abs(v - mean[i]) <= FLAT_BACKDROP_TOLERANCE));
+
+    return flat ? `rgb(${mean.map(Math.round).join(",")})` : "#ffffff";
+  } catch {
+    // A cross-origin source would taint the canvas. Never happens for a local
+    // file, but the read is not worth throwing an upload away over.
+    return "#ffffff";
+  }
+}
+
+async function standardise(file: File): Promise<File> {
   if (typeof createImageBitmap !== "function") return file;
 
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-
-    // Already small in both senses — re-encoding would only lose detail.
-    if (scale === 1 && file.size <= SHRINK_ABOVE_BYTES) {
-      bitmap.close();
-      return file;
-    }
 
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
+    canvas.width = TARGET_W;
+    canvas.height = TARGET_H;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) {
       bitmap.close();
       return file;
     }
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    // Fit whole, centred. `min` never crops; a photo narrower or wider than 4:5
+    // gains bars rather than losing its edges.
+    const scale = Math.min(TARGET_W / bitmap.width, TARGET_H / bitmap.height);
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const x = Math.round((TARGET_W - w) / 2);
+    const y = Math.round((TARGET_H - h) / 2);
+
+    // Drawn first so the backdrop can be read off the photo itself, then the
+    // bars are filled around it. One canvas, one decode.
+    ctx.drawImage(bitmap, x, y, w, h);
     bitmap.close();
+
+    if (w < TARGET_W || h < TARGET_H) {
+      ctx.fillStyle = backdropOf(ctx, x, y, w, h);
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillRect(0, 0, TARGET_W, TARGET_H);
+      ctx.globalCompositeOperation = "source-over";
+    }
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/webp", 0.85),
     );
-    // A hand-optimised JPEG can beat this. Keep whichever is smaller.
-    if (!blob || blob.size >= file.size) return file;
+    // Unlike the old size-only pass, the result is kept even when it is the
+    // larger file. Its whole point is the shape, and the original does not
+    // have it.
+    if (!blob) return file;
 
     return new File([blob], `${file.name.replace(/\.[^.]+$/, "")}.webp`, {
       type: "image/webp",
@@ -150,7 +207,7 @@ export function ImageManager({
       // instead of failing the batch silently.
       for (const [i, original] of chosen.entries()) {
         setProgress(chosen.length > 1 ? `${i + 1} of ${chosen.length}` : "");
-        const file = await shrink(original);
+        const file = await standardise(original);
 
         const form = new FormData();
         form.set("file", file);
@@ -216,8 +273,15 @@ export function ImageManager({
             {images.length === 0 ? "No photos yet" : "Add another photo"}
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
-            Drag them in, or choose files. JPEG, PNG, WebP or AVIF. Anything large is
-            resized in the browser first, so photos straight off a phone are fine.
+            Drag them in, or choose files. JPEG, PNG, WebP or AVIF. Photos straight
+            off a phone are fine — every one is resized and set on the same
+            upright 4:5 canvas before it uploads, so the shop never has one plant
+            filling its frame and the next floating in empty space.
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
+            Nothing is cropped. A photo that is not already 4:5 gains a margin in
+            its own background colour, so shoot on a plain backdrop where you can.
+            Portrait suits the frame best.
           </p>
 
           {/* Asked before the upload, not after: a batch of photos is almost

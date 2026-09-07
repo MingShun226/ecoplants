@@ -6,8 +6,11 @@ import {
   CategoryCopyForm,
   CategoryImageForm,
   CategoryOrderControls,
+  DeleteCategory,
+  NewCategoryForm,
 } from "@/components/admin/misc-forms";
 import { listCategories, LOCALES } from "@/lib/admin/catalogue";
+import { CATEGORY_KINDS } from "@/lib/admin/enums";
 
 export const metadata: Metadata = { title: "Categories" };
 
@@ -18,6 +21,7 @@ export default async function CategoriesPage() {
     <AdminPage
       title="Categories"
       lead="The order here is the order they appear in the shop's navigation and footer."
+      actions={<NewCategoryForm kinds={CATEGORY_KINDS} />}
     >
       <AdminCard flush>
         <ul className="divide-y divide-border-subtle">
@@ -69,6 +73,7 @@ export default async function CategoriesPage() {
                   src={c.imageSrc}
                 />
                 <CategoryCopyForm categoryId={c.id} translations={c.translations} />
+                <DeleteCategory categoryId={c.id} name={c.name} />
               </div>
             </li>
           ))}
@@ -76,11 +81,11 @@ export default async function CategoriesPage() {
       </AdminCard>
 
       <p className="text-[12px] leading-relaxed text-text-tertiary">
-        Categories cannot be created or deleted here. A slug is baked into URLs, the
-        footer and the navigation, so adding one is a code change as much as a data
-        change — and deleting one orphans every product pointing at it. A derived
-        category like “pet safe” has no products assigned at all: membership is computed
-        from plant attributes, which is why its count is blank.
+        Deleting a category does not come back, and one holding plants is refused until
+        they are moved — open each plant and change its category under Classification. A
+        derived category like “pet safe” holds nothing at all: membership is computed
+        from plant attributes, which is why its count is blank, and why deleting it
+        removes the way to browse by it rather than any plant.
       </p>
     </AdminPage>
   );

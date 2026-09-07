@@ -5,7 +5,7 @@ import { getSessionAdmin } from "@/lib/admin/session";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/admin/actions";
 import type { LocaleCode } from "@/lib/admin/catalogue";
-import { POT_COLOR_KEYS, POT_MATERIAL_KEYS } from "@/lib/admin/enums";
+import { CATEGORY_KINDS, POT_COLOR_KEYS, POT_MATERIAL_KEYS } from "@/lib/admin/enums";
 
 /**
  * Catalogue, stock, review and settings mutations.
@@ -510,6 +510,140 @@ export async function removeCategoryImage(categoryId: string): Promise<ActionRes
   if (error) return { ok: false, error: error.message };
 
   const path = (data as { image_path: string | null } | null)?.image_path;
+  if (path) await supabase.storage.from("product-images").remove([path]);
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// ---------------------------------------------------- create & delete category --
+
+/**
+ * Add a category.
+ *
+ * English only, and never derived. A derived collection — pet-safe, new
+ * arrivals — is computed from the plants themselves by code that has to know
+ * what it is computing, so one cannot be invented from a name. What this makes
+ * is a category products are filed into by hand, which is the only kind a name
+ * is enough to define.
+ *
+ * Malay and Chinese are added afterwards on the same screen, exactly as they
+ * are for a plant. Until they exist the storefront falls back to English rather
+ * than showing a blank chip in the navigation.
+ */
+export async function createCategory(
+  name: string,
+  kind: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Give it a name." };
+
+  const base = slugify(trimmed);
+  if (!SLUG.test(base)) {
+    return { ok: false, error: "The name needs at least one letter or number in it." };
+  }
+  if (!(CATEGORY_KINDS as readonly string[]).includes(kind)) {
+    return { ok: false, error: "That is not a kind the shop knows." };
+  }
+
+  const supabase = await createClient();
+
+  // The slug is in the URL of the filtered listing, so it has to be unique.
+  // Names repeat more often than anyone expects — "Gifts" twice in a year —
+  // and taking the next free suffix beats refusing over a value the operator
+  // never typed and cannot see.
+  const { data: taken } = await supabase.from("categories").select("slug").like("slug", `${base}%`);
+  const used = new Set(((taken ?? []) as { slug: string }[]).map((r) => r.slug));
+  let slug = base;
+  for (let n = 2; used.has(slug); n += 1) slug = `${base}-${n}`;
+
+  // Last, so a new one lands at the end of the menu rather than in the middle
+  // of an order somebody arranged.
+  const { data: lastRow } = await supabase
+    .from("categories")
+    .select("position")
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const position = ((lastRow as { position: number } | null)?.position ?? 0) + 1;
+
+  const { data: created, error } = await supabase
+    .from("categories")
+    .insert({ slug, kind, position, is_derived: false })
+    .select("id")
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+
+  const id = (created as { id: string }).id;
+
+  const { error: copyError } = await supabase
+    .from("category_translations")
+    .insert({ category_id: id, locale: "en", name: trimmed, description: "" });
+
+  if (copyError) {
+    // A category with no copy renders as its slug in the navigation. Roll the
+    // row back rather than leave that in the menu.
+    await supabase.from("categories").delete().eq("id", id);
+    return { ok: false, error: copyError.message };
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/", "layout");
+  return { ok: true, id };
+}
+
+/**
+ * Remove a category, but never one holding plants.
+ *
+ * The row's own deletes cascade — its copy goes with it — but `products.
+ * category_id` does not, and should not: deleting a category that holds
+ * products either orphans them or takes them off the shop, and neither is
+ * something to do behind a confirm dialog. So it is refused, and the message
+ * says how many and where to move them.
+ *
+ * A derived collection has nothing filed into it and is always removable. What
+ * goes with it is the filter itself — the shop stops offering "pet-safe" as a
+ * way to browse — which is the shop owner's call to make.
+ */
+export async function deleteCategory(categoryId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+
+  const { count, error: countError } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", categoryId);
+
+  if (countError) return { ok: false, error: countError.message };
+
+  if ((count ?? 0) > 0) {
+    return {
+      ok: false,
+      error:
+        `${count} ${count === 1 ? "plant is" : "plants are"} filed under this category. ` +
+        "Move them to another one first — open each plant and change its category under Classification.",
+    };
+  }
+
+  const { data: existing } = await supabase
+    .from("categories")
+    .select("image_path")
+    .eq("id", categoryId)
+    .maybeSingle();
+
+  const { error } = await supabase.from("categories").delete().eq("id", categoryId);
+  if (error) return { ok: false, error: error.message };
+
+  // After the row, never before: a failed delete that had already removed the
+  // artwork leaves a category pointing at nothing.
+  const path = (existing as { image_path: string | null } | null)?.image_path;
   if (path) await supabase.storage.from("product-images").remove([path]);
 
   revalidatePath("/admin/categories");

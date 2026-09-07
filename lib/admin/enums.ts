@@ -27,6 +27,14 @@ export type CareDifficulty = "beginner" | "easy" | "moderate" | "expert";
 export type PlantPlacement = "indoor" | "outdoor" | "both";
 export type CategoryKind = "plants" | "pots" | "care" | "gifts";
 
+/**
+ * What a category can be a category *of*.
+ *
+ * The database column is an enum, so this is the whole set — a value outside it
+ * is refused by Postgres rather than by us, and the form should never offer one.
+ */
+export const CATEGORY_KINDS: CategoryKind[] = ["plants", "pots", "care", "gifts"];
+
 export const LIGHT_LEVELS: LightLevel[] = ["low", "medium", "bright-indirect", "direct-sun"];
 export const WATER_FREQUENCIES: WaterFrequency[] = ["weekly", "fortnightly", "when-dry", "keep-moist"];
 export const DIFFICULTIES: CareDifficulty[] = ["beginner", "easy", "moderate", "expert"];

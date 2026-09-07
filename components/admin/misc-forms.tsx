@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronDown, ChevronUp, ImageIcon, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ImageIcon, Plus, Sparkles, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { changeOwnPassword } from "@/lib/admin/actions";
 import {
+  createCategory,
+  deleteCategory,
   deleteReview,
   reorderCategory,
   setReviewApproved,
@@ -23,6 +25,13 @@ import type { ShopSettings } from "@/lib/admin/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------- reviews --
@@ -723,5 +732,179 @@ export function ChangePasswordForm({ username }: { username: string }) {
         ) : null}
       </div>
     </form>
+  );
+}
+
+// ---------------------------------------------------------- new category --
+
+/**
+ * Add a category.
+ *
+ * A name and what it is a category of, and nothing else — the slug follows the
+ * name, the position is the end of the list, and Malay and Chinese are added
+ * afterwards on the row it creates. A form that asks for everything up front is
+ * a form that gets abandoned halfway.
+ */
+export function NewCategoryForm({ kinds }: { kinds: readonly string[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState("plants");
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-2">
+        <Plus className="size-3.5" aria-hidden="true" />
+        New category
+      </Button>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError(null);
+        start(async () => {
+          const result = await createCategory(name, kind);
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          setName("");
+          setOpen(false);
+          router.refresh();
+        });
+      }}
+      className="flex flex-wrap items-end gap-3 rounded-lg border border-border-default bg-surface px-4 py-3.5"
+    >
+      <div className="flex min-w-[12rem] flex-1 flex-col gap-1.5">
+        <Label htmlFor="new-category-name" className="text-[11px]">
+          Name in English
+        </Label>
+        <Input
+          id="new-category-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Gifts"
+          autoFocus
+          required
+          className="h-8 rounded-sm text-[13px]"
+        />
+      </div>
+
+      <div className="flex w-40 flex-col gap-1.5">
+        <Label htmlFor="new-category-kind" className="text-[11px]">
+          A category of
+        </Label>
+        <Select value={kind} onValueChange={setKind}>
+          <SelectTrigger id="new-category-kind" className="h-8 rounded-sm text-[13px] capitalize">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {kinds.map((k) => (
+              <SelectItem key={k} value={k} className="capitalize">
+                {k}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" disabled={pending || name.trim() === ""}>
+          {pending ? "Adding…" : "Add"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={pending}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+
+      {error ? (
+        <p role="alert" className="w-full text-[12px] leading-relaxed text-danger">
+          {error}
+        </p>
+      ) : null}
+
+      <p className="w-full text-[11px] leading-relaxed text-text-tertiary">
+        Plants are filed into it by hand, from each plant&rsquo;s Classification panel.
+        A category that fills itself from plant attributes — like Pet-safe — is
+        computed in code and cannot be created here.
+      </p>
+    </form>
+  );
+}
+
+/**
+ * Remove a category.
+ *
+ * Two presses, because it does not come back. The first press is the whole
+ * confirmation: a dialog for something this small is more ceremony than it is
+ * worth, and the button relabelling itself is impossible to hit by accident
+ * twice.
+ *
+ * The refusal it most often gets — plants are filed under this — is not an
+ * error to apologise for. It is the answer, and it says how many and what to do.
+ */
+export function DeleteCategory({ categoryId, name }: { categoryId: string; name: string }) {
+  const router = useRouter();
+  const [armed, setArmed] = useState(false);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={armed ? "destructive" : "ghost"}
+          disabled={pending}
+          onClick={() => {
+            if (!armed) {
+              setArmed(true);
+              setError(null);
+              return;
+            }
+            start(async () => {
+              const result = await deleteCategory(categoryId);
+              if (!result.ok) {
+                setError(result.error);
+                setArmed(false);
+                return;
+              }
+              router.refresh();
+            });
+          }}
+          className="gap-1.5"
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+          {pending ? "Deleting…" : armed ? `Delete ${name} for good` : "Delete"}
+        </Button>
+
+        {armed && !pending ? (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setArmed(false)}>
+            Cancel
+          </Button>
+        ) : null}
+      </div>
+
+      {error ? (
+        <p role="alert" className="max-w-md text-[12px] leading-relaxed text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

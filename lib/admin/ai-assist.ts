@@ -163,7 +163,7 @@ const COPY_SCHEMA = {
     careSummary: {
       type: "string",
       description:
-        "140-155 characters. This is the Google search snippet, so it must read as a complete sentence and name the plant.",
+        "The Google search snippet. One complete sentence, naming the plant. Length rule is in the instructions and differs by language.",
     },
     climateNote: {
       type: "string",
@@ -257,7 +257,10 @@ export function buildPrompt(input: { name: string; botanical: string; hasPhoto: 
     "Rules:",
     "- Write each language natively. Do not translate the English word by word — a Malay shopper and a Chinese shopper search for different things, so use the terms each actually types.",
     "- Chinese copy uses Simplified characters, as used in Malaysia.",
-    "- The care summary is the Google search snippet. 140-155 characters, a complete sentence, and it must contain the plant's name.",
+    "- The care summary is the Google search snippet, so length is a hard constraint, not a target.",
+    "  English and Bahasa Melayu: 140-155 characters.",
+    "  Chinese: 70-80 characters. A Chinese character carries several times the meaning of a Latin one, and Google truncates a Chinese snippet far earlier — a 150-character Chinese summary is cut off mid-sentence in the results.",
+    "  Each is one complete sentence, and each contains the plant's name.",
     "- Write for Malaysia: year-round heat, high humidity, monsoon rain, and air-conditioned rooms that dry a plant out. Never mention frost, winter or hardiness zones.",
     "- Say what is true of the plant, not what would sell it. No invented awards, origins or health claims.",
     input.hasPhoto

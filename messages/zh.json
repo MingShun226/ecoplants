@@ -125,7 +125,9 @@
     "emptyBody": "试着移除一项——光线加上宠物安全会让选项迅速变少。或者让我们替你挑。",
     "bareTitle": "这里还没有植物",
     "bareBody": "这一区还在筹备中。新植物一旦适合运送，就会出现在这里。",
-    "deliveryNoteLabel": "配送说明。"
+    "deliveryNoteLabel": "配送说明。",
+    "allPlantsTitle": "我们培育的所有植物",
+    "allPlantsLead": "整间苗圃集中在一页。可依摆放位置、光线条件和照顾难度筛选。"
   },
   "facets": {
     "light": "你空间的光线",
@@ -136,7 +138,9 @@
     "size": "成熟尺寸",
     "sizeDesk": "桌面（50cm 以下）",
     "sizeFloor": "层架至落地（50–150cm）",
-    "sizeStatement": "大型（150cm 以上）"
+    "sizeStatement": "大型（150cm 以上）",
+    "new": "新到",
+    "newOnly": "刚到货"
   },
   "attributes": {
     "lightLow": "弱光",

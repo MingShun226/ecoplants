@@ -122,7 +122,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   </p>
                 </div>
                 <Button asChild className="px-6" onClick={onClose}>
-                  <Link href="/category/indoor">{ta("shopPlants")}</Link>
+                  <Link href="/plants">{ta("shopPlants")}</Link>
                 </Button>
               </div>
             ) : (

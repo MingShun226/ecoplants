@@ -12,7 +12,13 @@ import { PlantCard } from "@/components/features/plant-card";
 import { RevealSection } from "@/components/features/reveal-section";
 import { Link } from "@/i18n/navigation";
 import { type Locale, routing } from "@/i18n/routing";
-import { lightDetailKeys, lightKeys, waterDetailKeys, waterKeys } from "@/lib/data/facets";
+import {
+  categoryHref,
+  lightDetailKeys,
+  lightKeys,
+  waterDetailKeys,
+  waterKeys,
+} from "@/lib/data/facets";
 import { getProductBySlug, getProducts, getRelated } from "@/lib/data/queries";
 import { site } from "@/lib/data/site";
 import { getSettings, whatsappUrl } from "@/lib/data/settings";
@@ -130,7 +136,7 @@ export default async function ProductPage({
             <li aria-hidden="true">/</li>
             <li>
               <Link
-                href={`/category/${product.categorySlug}`}
+                href={categoryHref(product.categorySlug)}
                 className="transition-colors hover:text-text-primary"
               >
                 {product.categorySlug.replace("-", " ")}

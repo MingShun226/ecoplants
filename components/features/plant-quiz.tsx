@@ -303,7 +303,7 @@ function Results({
           {t("retake")}
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/category/indoor">{t("browseInstead")}</Link>
+          <Link href="/plants">{t("browseInstead")}</Link>
         </Button>
       </div>
     </div>

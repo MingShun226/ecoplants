@@ -10,6 +10,7 @@ import { Hero } from "@/components/features/hero";
 import { PlantCard } from "@/components/features/plant-card";
 import { RevealSection } from "@/components/features/reveal-section";
 import { Button } from "@/components/ui/button";
+import { categoryHref } from "@/lib/data/facets";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import {
@@ -137,7 +138,7 @@ export default async function HomePage({
             body={t("spaceLead")}
             action={
               <Button asChild variant="outline" className="px-6">
-                <Link href="/category/indoor">
+                <Link href="/plants">
                   {ta("seeAll")}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
@@ -156,7 +157,7 @@ export default async function HomePage({
               return (
                 <RevealSection key={category.id} delay={i * 0.08}>
                   <Link
-                    href={`/category/${category.slug}`}
+                    href={categoryHref(category.slug)}
                     className="group block"
                     title={tcd(category.key)}
                   >
@@ -297,7 +298,7 @@ export default async function HomePage({
             accent={t("featuredHeadingAccent")}
             action={
               <Button asChild variant="ghost">
-                <Link href="/category/indoor">
+                <Link href="/plants">
                   {ta("exploreMore")}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
@@ -387,7 +388,7 @@ export default async function HomePage({
             body={t("petSafeLead")}
             action={
               <Button asChild variant="outline" className="px-6">
-                <Link href="/category/pet-safe">
+                <Link href="/plants?pets=safe">
                   {ta("seeAll")}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>

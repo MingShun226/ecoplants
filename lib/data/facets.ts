@@ -50,7 +50,7 @@ export const difficultyLevel: Record<Difficulty, number> = {
   expert: 4,
 };
 
-export type FacetKey = "light" | "difficulty" | "petSafe" | "placement" | "size";
+export type FacetKey = "light" | "difficulty" | "petSafe" | "placement" | "size" | "isNew";
 
 export interface FacetGroup {
   key: FacetKey;
@@ -83,6 +83,12 @@ export const facetGroups: FacetGroup[] = [
       { value: "moderate", labelKey: "difficultyModerate", ns: "attributes" },
       { value: "expert", labelKey: "difficultyExpert", ns: "attributes" },
     ],
+  },
+  {
+    key: "isNew",
+    param: "new",
+    labelKey: "new",
+    options: [{ value: "1", labelKey: "newOnly", ns: "facets" }],
   },
   {
     key: "petSafe",
@@ -151,6 +157,8 @@ export function applyFacets(items: Product[], selected: SelectedFacets): Product
             return p.attributes.light === value;
           case "difficulty":
             return p.attributes.difficulty === value;
+          case "isNew":
+            return p.isNew;
           case "petSafe":
             return p.attributes.petSafe === true;
           case "placement":
@@ -235,4 +243,34 @@ export function countSelected(selected: SelectedFacets): number {
     (total, group) => total + (selected[group.param]?.length ?? 0),
     0,
   );
+}
+
+/**
+ * Where a category slug points now that categories are filters.
+ *
+ * Each of these was a route of its own, and each was a filtered catalogue
+ * wearing one: "indoor" is a placement, "pet-safe" a pet-safety flag,
+ * "hard to kill" a difficulty. Splitting them across routes meant the
+ * combinations could not be expressed at all — pet-safe plants for the porch
+ * needed one page and then a filter back to the other.
+ *
+ * Both the navigation and the redirect that catches the old `/category/…` URLs
+ * read this, so a shopper following a bookmark and a shopper clicking the menu
+ * cannot end up looking at different plants.
+ */
+const CATEGORY_FACETS: Record<string, string> = {
+  new: "?new=1",
+  indoor: "?where=indoor",
+  outdoor: "?where=outdoor",
+  "pet-safe": "?pets=safe",
+  beginner: "?care=beginner",
+  // Pots and soil are not plants and have no facet to land on. They go to the
+  // unfiltered listing rather than to a filter that would quietly show nothing.
+  pots: "",
+  care: "",
+};
+
+/** The listing, filtered the way this category used to be. */
+export function categoryHref(slug: string): string {
+  return `/plants${CATEGORY_FACETS[slug] ?? ""}`;
 }

@@ -104,7 +104,7 @@ export function SignUpForm() {
           // instead and confirm the account in a toast — the account page is
           // one tap away in the header whenever they want it.
           toast.success(t("welcome", { name: fullName.trim().split(" ")[0] }));
-          router.push("/category/indoor");
+          router.push("/plants");
           router.refresh();
         });
       }}

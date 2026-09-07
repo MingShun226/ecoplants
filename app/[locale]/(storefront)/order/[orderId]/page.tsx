@@ -207,7 +207,7 @@ export default async function OrderPage({
 
         <div className="mt-8">
           <Button asChild variant="outline">
-            <Link href="/category/indoor">{ta("shopPlants")}</Link>
+            <Link href="/plants">{ta("shopPlants")}</Link>
           </Button>
         </div>
       </div>

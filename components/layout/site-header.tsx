@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { categoryHref } from "@/lib/data/facets";
 import { categories, getProducts } from "@/lib/data/queries";
 import { getSettings } from "@/lib/data/settings";
 import { toMajor } from "@/lib/utils/format";
@@ -31,9 +32,14 @@ export async function SiteHeader() {
   // Short labels in the bar, full names on the category pages themselves — a
   // nav that reads "Pet-Safe Plants" next to "Garden & Balcony" is a paragraph,
   // not a nav.
-  const navItems = categories
-    .filter((c) => c.type === "plants")
-    .map((c) => ({ href: `/category/${c.slug}`, label: tn(c.key) }));
+  const navItems = [
+    // The listing itself comes first. Without it the bar offered four filtered
+    // views of the catalogue and no way to see the catalogue.
+    { href: "/plants", label: tn("allPlants") },
+    ...categories
+      .filter((c) => c.type === "plants")
+      .map((c) => ({ href: categoryHref(c.slug), label: tn(c.key) })),
+  ];
 
   // The search index is built here so the client gets one flat, pre-localised
   // array instead of the whole catalogue. Matching spans every locale's name:

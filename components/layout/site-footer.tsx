@@ -3,6 +3,7 @@ import { getFormatter, getTranslations } from "next-intl/server";
 import { Wordmark } from "@/components/brand/logo";
 import { LeafRule, WhatsAppIcon } from "@/components/brand/primitives";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { categoryHref } from "@/lib/data/facets";
 import { Link } from "@/i18n/navigation";
 import { getSettings, whatsappUrl } from "@/lib/data/settings";
 import { toMajor } from "@/lib/utils/format";
@@ -21,10 +22,11 @@ export async function SiteFooter() {
     {
       heading: t("shopHeading"),
       links: [
-        { href: "/category/indoor", label: tn("indoor") },
-        { href: "/category/outdoor", label: tn("outdoor") },
-        { href: "/category/pet-safe", label: tn("petSafe") },
-        { href: "/category/beginner", label: tn("beginner") },
+        { href: "/plants", label: tn("allPlants") },
+        { href: categoryHref("indoor"), label: tn("indoor") },
+        { href: categoryHref("outdoor"), label: tn("outdoor") },
+        { href: categoryHref("pet-safe"), label: tn("petSafe") },
+        { href: categoryHref("beginner"), label: tn("beginner") },
         { href: "/category/pots", label: tn("pots") },
       ],
     },

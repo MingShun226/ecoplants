@@ -103,7 +103,7 @@ export async function Hero() {
           </p>
 
           <Link
-            href="/category/indoor"
+            href="/plants"
             className="rise-in-lg group mt-2 inline-flex items-center gap-2.5 rounded-full bg-ink-50 px-7 py-3.5 text-sm font-medium text-ink-950 transition-colors duration-300 hover:bg-leaf-300"
             style={{ animationDelay: "0.42s" }}
           >

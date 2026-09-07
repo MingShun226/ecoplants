@@ -92,7 +92,7 @@ export default async function GuaranteePage({
             </a>
           </Button>
           <Button asChild variant="outline" size="lg" className="px-7">
-            <Link href="/category/indoor">{t("backToPlants")}</Link>
+            <Link href="/plants">{t("backToPlants")}</Link>
           </Button>
         </div>
 

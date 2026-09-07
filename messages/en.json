@@ -125,7 +125,9 @@
     "emptyBody": "Try removing one — light and pet-safety together narrow things down fast. Or let us pick for you.",
     "bareTitle": "Nothing here yet",
     "bareBody": "We are still settling this shelf in. New plants land here as soon as they are ready to travel.",
-    "deliveryNoteLabel": "Delivery note."
+    "deliveryNoteLabel": "Delivery note.",
+    "allPlantsTitle": "Every plant we grow",
+    "allPlantsLead": "The whole nursery in one place. Narrow it down by where it will live, how much light it gets and how much care you want to give it."
   },
   "facets": {
     "light": "Light in your space",
@@ -136,7 +138,9 @@
     "size": "Mature size",
     "sizeDesk": "Desk (under 50cm)",
     "sizeFloor": "Shelf to floor (50–150cm)",
-    "sizeStatement": "Statement (over 150cm)"
+    "sizeStatement": "Statement (over 150cm)",
+    "new": "New in",
+    "newOnly": "Just arrived"
   },
   "attributes": {
     "lightLow": "Low light",

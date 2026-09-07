@@ -106,7 +106,7 @@ export function CheckoutClient({
           {tc("emptyBody")}
         </p>
         <Button asChild size="lg" className="mt-10 px-7">
-          <Link href="/category/indoor">{ta("shopPlants")}</Link>
+          <Link href="/plants">{ta("shopPlants")}</Link>
         </Button>
       </div>
     );
@@ -149,7 +149,7 @@ export function CheckoutClient({
       className="container-page section-y pt-8 md:pt-12"
     >
       <Link
-        href="/category/indoor"
+        href="/plants"
         className="inline-flex items-center gap-2 text-[13px] text-text-tertiary transition-colors hover:text-text-primary"
       >
         <ArrowLeft className="size-3.5" aria-hidden="true" />

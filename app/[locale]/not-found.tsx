@@ -14,7 +14,7 @@ export default function LocaleNotFound() {
       <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-text-secondary">{t("body")}</p>
       <div className="mt-10 flex flex-wrap justify-center gap-3">
         <Button asChild size="lg" className="px-7">
-          <Link href="/category/indoor">{ta("shopPlants")}</Link>
+          <Link href="/plants">{ta("shopPlants")}</Link>
         </Button>
         <Button asChild variant="outline" size="lg" className="px-7">
           <Link href="/">{t("backHome")}</Link>

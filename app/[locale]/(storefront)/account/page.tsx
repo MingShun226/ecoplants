@@ -100,7 +100,7 @@ export default async function AccountPage({
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-3">
                 <Button asChild>
-                  <Link href="/category/indoor">{ta("shopPlants")}</Link>
+                  <Link href="/plants">{ta("shopPlants")}</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href="/quiz">{t("ordersEmptyQuiz")}</Link>

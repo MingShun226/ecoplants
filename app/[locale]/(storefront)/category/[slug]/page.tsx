@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -8,6 +8,7 @@ import { CategoryResults } from "@/components/features/category-results";
 import { RevealSection } from "@/components/features/reveal-section";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { categoryHref } from "@/lib/data/facets";
 import { categories, getCategory, getProductsByCategory } from "@/lib/data/queries";
 
 export function generateStaticParams() {
@@ -48,6 +49,27 @@ export default async function CategoryPage({
 
   const category = getCategory(slug);
   if (!category) notFound();
+
+  /*
+   * The plant categories are facets now.
+   *
+   * Each was a filtered catalogue wearing a route — "indoor" is a placement,
+   * "pet-safe" a pet-safety flag, "hard to kill" a difficulty — so splitting
+   * them across pages meant the combinations could not be expressed at all, and
+   * it made `/category/indoor` the de facto front door of the shop: "Shop now"
+   * opened a list with the garden plants already excluded and nothing on screen
+   * saying so.
+   *
+   * The pages are gone; the URLs are not. They are in Google, in order emails
+   * and in whatever a customer bookmarked, so each lands on the same plants it
+   * always did. A 308 rather than a 302, because they are not coming back and
+   * the ranking should move to the listing rather than split between two URLs
+   * showing the same thing.
+   *
+   * Pots and soil are not plants and have no facet to land on, so they keep a
+   * listing of their own — which is what the rest of this page still renders.
+   */
+  if (category.type === "plants") permanentRedirect(`/${locale}${categoryHref(slug)}`);
 
   const tc = await getTranslations("categories");
   const tcd = await getTranslations("categoryDescriptions");

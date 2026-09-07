@@ -1,11 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import Image from "next/image";
+import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ProductImage } from "@/types/catalog";
+
+/** How much bigger than the frame a zoomed photograph is drawn. */
+const ZOOM = 2;
 
 /**
  * The full-screen photograph.
@@ -15,10 +17,18 @@ import type { ProductImage } from "@/types/catalog";
  * from the platform, all of which are easy to write badly and expensive to get
  * wrong for someone using a keyboard or a screen reader.
  *
- * Zoom is a toggle, not a slider. A shopper wants to see whether the leaf edges
- * are browning, and one decisive step to 2.5× at the point they clicked answers
- * that; a continuous control turns a glance into an operation. On a touch screen
- * the browser's own pinch handles it, so there the toggle is only a shortcut.
+ * Two things decide the rest of the structure.
+ *
+ * The photograph is a plain `<img>` sized by `max-width`/`max-height` rather
+ * than a filled `next/image`. A filled image's element box is the whole frame
+ * whatever the picture's shape, so every click in the letterboxing either side
+ * of a portrait shot lands *on the image* — which made the empty space
+ * un-clickable as a way out. Sized this way the box is the picture, and
+ * everything around it belongs to the backdrop and closes.
+ *
+ * Zoom is a bigger image inside a scrolling box, not a CSS transform. A
+ * transform paints larger but leaves nothing to scroll, so a wheel over a
+ * magnified photo scrolled the page behind it instead of moving the picture.
  */
 export function ImageLightbox({
   images,
@@ -36,6 +46,9 @@ export function ImageLightbox({
 }) {
   const t = useTranslations("product");
   const ref = useRef<HTMLDialogElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+
+  /** Where in the picture the shopper zoomed, as fractions, or null when out. */
   const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
 
   const open = index !== null;
@@ -50,6 +63,19 @@ export function ImageLightbox({
     if (!open && el.open) el.close();
   }, [open]);
 
+  // A modal dialog stops clicks reaching the page but not scrolls, so without
+  // this the document still moves under the viewer — and is left somewhere else
+  // when it closes.
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, [open]);
+
   // A new photo is a new thing to look at, so it starts unzoomed. Adjusted
   // during render rather than in an effect, so the incoming photo never paints
   // once at the outgoing one's magnification before snapping back.
@@ -58,6 +84,19 @@ export function ImageLightbox({
     setZoomedIndex(index);
     setZoom(null);
   }
+
+  // Put the point that was clicked in the middle of the frame. Has to wait for
+  // the enlarged image to exist, which is why it is an effect and not part of
+  // the click handler.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !zoom) return;
+    el.scrollTo({
+      left: zoom.x * el.scrollWidth - el.clientWidth / 2,
+      top: zoom.y * el.scrollHeight - el.clientHeight / 2,
+      behavior: "instant",
+    });
+  }, [zoom]);
 
   const move = useCallback(
     (delta: number) => {
@@ -77,35 +116,30 @@ export function ImageLightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, move]);
 
-  /** Zoom towards the point that was clicked, so the detail stays under the cursor. */
-  const toggleZoom = (e: React.MouseEvent<HTMLDivElement>) => {
+  /** Zoom towards the point clicked, so the detail stays where the eye is. */
+  const toggleZoom = (e: React.MouseEvent<HTMLImageElement>) => {
     if (zoom) {
       setZoom(null);
       return;
     }
     const box = e.currentTarget.getBoundingClientRect();
     setZoom({
-      x: ((e.clientX - box.left) / box.width) * 100,
-      y: ((e.clientY - box.top) / box.height) * 100,
+      x: (e.clientX - box.left) / box.width,
+      y: (e.clientY - box.top) / box.height,
     });
   };
+
+  const close = () => ref.current?.close();
 
   return (
     <dialog
       ref={ref}
       onClose={onClose}
       aria-label={alt}
-      // The backdrop is a click target for closing, so the dialog itself fills
-      // the screen and the padding around the photo belongs to the figure.
       className={cn(
-        "m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 text-text-primary",
+        "m-0 h-full max-h-none w-full max-w-none bg-transparent p-0",
         "backdrop:bg-ink-950/90 backdrop:backdrop-blur-sm",
       )}
-      onClick={(e) => {
-        // Only the backdrop. A click that started on the photo or a control has
-        // that element as its target and must not close anything.
-        if (e.target === ref.current) ref.current?.close();
-      }}
     >
       {image ? (
         <div className="flex h-full w-full flex-col">
@@ -119,17 +153,32 @@ export function ImageLightbox({
               ) : null}
             </p>
 
-            <button
-              type="button"
-              onClick={() => ref.current?.close()}
-              aria-label={t("closeImage")}
-              className="-mr-1 flex size-9 shrink-0 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
-            >
-              <X className="size-5" aria-hidden="true" />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setZoom(zoom ? null : { x: 0.5, y: 0.5 })}
+                aria-label={zoom ? t("zoomOut") : t("zoomIn")}
+                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+              >
+                {zoom ? (
+                  <ZoomOut className="size-5" aria-hidden="true" />
+                ) : (
+                  <ZoomIn className="size-5" aria-hidden="true" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={close}
+                aria-label={t("closeImage")}
+                className="flex size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
-          <div className="relative flex min-h-0 flex-1 items-center justify-center">
+          <div className="relative min-h-0 flex-1">
             {images.length > 1 ? (
               <Arrow side="left" label={t("previousImage")} onClick={() => move(-1)}>
                 <ChevronLeft className="size-6" aria-hidden="true" />
@@ -137,40 +186,55 @@ export function ImageLightbox({
             ) : null}
 
             {/*
-              The photo is wrapped rather than clicked directly so the zoom
-              origin is measured against a box the size of the frame, not the
-              letterboxed image inside it.
+              The scrolling box, and the way out.
+
+              Anything in here that is not the photograph is empty space around
+              it, so a click whose target is this element — or the centring box
+              inside it — closes the viewer. `overscroll-contain` keeps a scroll
+              that reaches the edge of a zoomed picture from continuing into the
+              page underneath.
             */}
             <div
-              role="button"
-              tabIndex={0}
-              aria-label={zoom ? t("zoomOut") : t("zoomIn")}
-              onClick={toggleZoom}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" && e.key !== " ") return;
-                e.preventDefault();
-                setZoom(zoom ? null : { x: 50, y: 50 });
+              ref={scroller}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) close();
               }}
               className={cn(
-                "relative h-full w-full touch-pan-x touch-pan-y select-none overflow-hidden",
-                zoom ? "cursor-zoom-out" : "cursor-zoom-in",
+                "h-full w-full overscroll-contain",
+                zoom ? "overflow-auto" : "flex items-center justify-center overflow-hidden",
               )}
             >
-              <Image
-                key={image.id}
-                src={image.src}
-                alt={image.alt || alt}
-                fill
-                sizes="100vw"
-                quality={90}
-                priority
-                className="object-contain p-4 transition-transform duration-300 ease-out motion-reduce:transition-none sm:p-10"
-                style={
-                  zoom
-                    ? { transform: "scale(2.5)", transformOrigin: `${zoom.x}% ${zoom.y}%` }
-                    : undefined
-                }
-              />
+              <div
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) close();
+                }}
+                className={cn(
+                  "flex items-center justify-center",
+                  zoom ? "min-h-full min-w-full" : "h-full w-full p-4 sm:p-10",
+                )}
+              >
+                {/*
+                  A plain <img>, not next/image. `fill` would make the element
+                  box the whole frame, so the empty space beside a portrait shot
+                  would be part of the picture as far as a click is concerned —
+                  and that space is exactly what has to close the viewer.
+                */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  key={image.id}
+                  src={image.src}
+                  alt={image.alt || alt}
+                  onClick={toggleZoom}
+                  draggable={false}
+                  className={cn(
+                    "select-none",
+                    zoom
+                      ? "max-w-none cursor-zoom-out"
+                      : "max-h-full max-w-full cursor-zoom-in object-contain",
+                  )}
+                  style={zoom ? { width: `${ZOOM * 100}%`, height: "auto" } : undefined}
+                />
+              </div>
             </div>
 
             {images.length > 1 ? (
@@ -181,7 +245,7 @@ export function ImageLightbox({
           </div>
 
           <p className="shrink-0 px-4 pb-4 text-center text-[12px] text-ink-50/45 sm:pb-6">
-            {t("zoomHint")}
+            {zoom ? t("zoomedHint") : t("zoomHint")}
           </p>
         </div>
       ) : null}

@@ -213,7 +213,8 @@
     "nextImage": "Next photo",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "zoomHint": "Click the photo to zoom. Press Esc to close."
+    "zoomHint": "Click the photo to zoom, or the space around it to close.",
+    "zoomedHint": "Scroll to move around. Click the photo to zoom out."
   },
   "quiz": {
     "progress": "{step} / {total}",

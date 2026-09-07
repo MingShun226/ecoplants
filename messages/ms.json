@@ -213,7 +213,8 @@
     "nextImage": "Gambar seterusnya",
     "zoomIn": "Zum masuk",
     "zoomOut": "Zum keluar",
-    "zoomHint": "Klik gambar untuk zum. Tekan Esc untuk tutup."
+    "zoomHint": "Klik gambar untuk zum, atau ruang di sekelilingnya untuk tutup.",
+    "zoomedHint": "Skrol untuk gerak. Klik gambar untuk zum keluar."
   },
   "quiz": {
     "progress": "{step} / {total}",

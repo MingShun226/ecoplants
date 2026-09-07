@@ -213,7 +213,8 @@
     "nextImage": "下一张",
     "zoomIn": "放大",
     "zoomOut": "缩小",
-    "zoomHint": "点击图片可放大，按 Esc 关闭。"
+    "zoomHint": "点击图片放大，点击周围空白处关闭。",
+    "zoomedHint": "滚动即可移动查看，点击图片可缩小。"
   },
   "quiz": {
     "progress": "{step} / {total}",

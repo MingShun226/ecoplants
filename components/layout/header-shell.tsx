@@ -68,7 +68,27 @@ export function HeaderShell({
       className={cn(
         "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,color] duration-500 ease-refined",
         overDark
-          ? "on-dark-tokens border-b border-transparent bg-transparent text-ink-50"
+          ? [
+              "on-dark-tokens border-b border-transparent bg-transparent text-ink-50",
+              /*
+               * A scrim of its own, because the photograph underneath is not
+               * reliably dark.
+               *
+               * Transparent over the hero is the right look, and it was betting
+               * the whole bar's legibility on whatever happened to be at the
+               * top of the picture. On a greenhouse shot that is bright
+               * sunlit foliage, and white-on-that is unreadable however
+               * opaque the text is — which is why turning the dimming off
+               * helped and did not fix it.
+               *
+               * Runs past the bar's own height and fades out, so there is no
+               * edge where it stops; from the page it reads as the photograph
+               * being darker at the top rather than as a panel behind the nav.
+               */
+              "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10",
+              "before:h-[calc(100%+4rem)] before:bg-gradient-to-b",
+              "before:from-ink-950/85 before:via-ink-950/55 before:to-transparent before:content-['']",
+            ]
           : "border-b border-border-subtle bg-canvas/85 text-text-primary backdrop-blur-md",
       )}
     >

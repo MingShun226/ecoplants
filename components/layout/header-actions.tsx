@@ -162,7 +162,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-label={t("search")}
-          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100 lg:hidden"
+          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100 [[data-over-dark]_&]:opacity-100 lg:hidden"
         >
           <Search className="size-[18px]" aria-hidden="true" />
         </button>
@@ -186,7 +186,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
               onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
               aria-label={t("search")}
               aria-expanded={searchOpen}
-              className="flex size-10 shrink-0 items-center justify-center rounded-full opacity-75 transition-opacity hover:opacity-100"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full opacity-75 transition-opacity hover:opacity-100 [[data-over-dark]_&]:opacity-100"
             >
               {searchOpen ? (
                 <X className="size-[18px]" aria-hidden="true" />
@@ -246,7 +246,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
         <Link
           href="/account"
           aria-label={tAccount("myAccount")}
-          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100"
+          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100 [[data-over-dark]_&]:opacity-100"
         >
           <User className="size-[18px]" aria-hidden="true" />
         </Link>
@@ -255,7 +255,7 @@ export function HeaderActions({ index }: { index: readonly SearchEntry[] }) {
           type="button"
           onClick={() => setCartOpen(true)}
           aria-label={t("cart")}
-          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100"
+          className="flex size-10 items-center justify-center rounded-full opacity-75 transition-all duration-300 hover:bg-current/10 hover:opacity-100 [[data-over-dark]_&]:opacity-100"
         >
           <span className="relative">
             <ShoppingBag className="size-[18px]" aria-hidden="true" />

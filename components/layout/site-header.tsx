@@ -138,7 +138,15 @@ export async function SiteHeader() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="relative block py-2 text-sm tracking-wide opacity-70 transition-opacity duration-300 ease-refined after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 after:ease-refined hover:opacity-100 hover:after:scale-x-100"
+                  /*
+                   * 70% is a quiet nav on the cream bar, where the ink is
+                   * nearly black and holding it back is what keeps the links
+                   * from shouting. Over the hero the same 70% is cream on a
+                   * dark photograph, which is not quiet — it is hard to read.
+                   * `data-over-dark` is already on the header, so the dimming
+                   * simply does not apply there.
+                   */
+                  className="relative block py-2 text-sm tracking-wide opacity-70 transition-opacity duration-300 ease-refined after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 after:ease-refined hover:opacity-100 hover:after:scale-x-100 [[data-over-dark]_&]:opacity-100"
                 >
                   {item.label}
                 </Link>

@@ -57,11 +57,18 @@ const ALL_VARIANTS = "__all__";
  * themselves, uploads are whatever shape the camera or the supplier's size
  * guide happened to be, so one plant filled its frame and the next sat in a
  * band of empty space — and a row of cards read as a jumble rather than a
- * shelf. Each photo is now fitted whole onto a 4:5 canvas and the leftover is
- * filled with the photo's own background colour, sampled from its corners, so
- * the padding is invisible on the white and grey backdrops a catalogue shot
- * actually uses. Fitted, never cropped: a size guide loses its measurements the
- * moment something trims its edges.
+ * shelf. Every upload is put on a 1600x2000 canvas.
+ *
+ * How it gets there depends on what it would cost. A phone photo is around
+ * 3:4, a hair narrower than 4:5, and squaring it up costs six percent off the
+ * top and bottom of a studio backdrop — nothing anybody will miss. A supplier's
+ * size guide is landscape, and squaring *that* up costs a quarter of its width,
+ * which is where the measurements are. So the rule is the loss, not the kind:
+ * crop when it costs less than an eighth of the picture, pad when it would cost
+ * more. See `CROP_BUDGET`.
+ *
+ * Padding uses the photo's own background colour, sampled from its corners, so
+ * on the white and grey a catalogue shot actually uses it cannot be seen.
  *
  * **Fewer pixels.** A photo off a phone is routinely 4000px wide and 6 MB,
  * which the 5 MB limit refuses outright — leaving the one person who has the
@@ -78,9 +85,27 @@ const ALL_VARIANTS = "__all__";
  */
 const TARGET_W = 1600;
 const TARGET_H = 2000;
+const TARGET_RATIO = TARGET_W / TARGET_H;
+
+/**
+ * The most of a picture squaring it up may cost before it is padded instead.
+ *
+ * An eighth. Below that the loss is backdrop — the top of a studio sweep, the
+ * floor under a pot — and cropping is invisibly better than bars down the
+ * sides. Above it the picture is a different shape on purpose, and the part
+ * being cut is the part it was taken for.
+ */
+const CROP_BUDGET = 0.125;
 
 /** How far two corners may differ and still count as one flat backdrop. */
 const FLAT_BACKDROP_TOLERANCE = 12;
+
+/** What squaring this picture up to the canvas would cost, as a fraction. */
+function cropCost(width: number, height: number): number {
+  const ratio = width / height;
+  // Narrower than the canvas loses height; wider loses width.
+  return ratio < TARGET_RATIO ? 1 - ratio / TARGET_RATIO : 1 - TARGET_RATIO / ratio;
+}
 
 /**
  * The colour to pad with: the photo's own backdrop where it has one.
@@ -126,11 +151,17 @@ async function standardise(file: File): Promise<File> {
       return file;
     }
 
-    // Fit whole, centred. `min` never crops; a photo narrower or wider than 4:5
-    // gains bars rather than losing its edges.
-    const scale = Math.min(TARGET_W / bitmap.width, TARGET_H / bitmap.height);
+    // `max` fills the canvas and lets the overflow fall off the edges; `min`
+    // fits the whole picture inside and leaves bars. Which one is chosen is the
+    // whole of the decision above.
+    const crops = cropCost(bitmap.width, bitmap.height) <= CROP_BUDGET;
+    const scale = crops
+      ? Math.max(TARGET_W / bitmap.width, TARGET_H / bitmap.height)
+      : Math.min(TARGET_W / bitmap.width, TARGET_H / bitmap.height);
+
     const w = Math.round(bitmap.width * scale);
     const h = Math.round(bitmap.height * scale);
+    // Centred either way: negative offsets crop evenly, positive ones pad evenly.
     const x = Math.round((TARGET_W - w) / 2);
     const y = Math.round((TARGET_H - h) / 2);
 
@@ -279,9 +310,11 @@ export function ImageManager({
             filling its frame and the next floating in empty space.
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-text-tertiary">
-            Nothing is cropped. A photo that is not already 4:5 gains a margin in
-            its own background colour, so shoot on a plain backdrop where you can.
-            Portrait suits the frame best.
+            A photo close to that shape is trimmed slightly to fit — a little
+            backdrop off the top and bottom, never the plant. One a long way off,
+            like a landscape size guide, keeps all of itself and gains a margin
+            in its own background colour instead. Portrait on a plain backdrop
+            works best.
           </p>
 
           {/* Asked before the upload, not after: a batch of photos is almost

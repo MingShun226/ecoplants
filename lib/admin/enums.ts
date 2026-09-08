@@ -67,6 +67,15 @@ export const POT_MATERIAL_KEYS = ["plastic", "terracotta", "ceramic", "fibreclay
 export type PotColorKey = (typeof POT_COLOR_KEYS)[number];
 export type PotMaterialKey = (typeof POT_MATERIAL_KEYS)[number];
 
+/**
+ * The sizes a plant is sold in.
+ *
+ * Message keys, like everything else a shopper reads: the storefront looks each
+ * one up under `sizes` in `messages/*.json`, so a value invented here renders
+ * as a raw key on a live product page.
+ */
+export const SIZE_KEYS = ["small", "medium", "large", "extra-large"] as const;
+
 /** The reasons stock moves in a nursery, as chips rather than a free-text box. */
 export const ADJUST_REASONS = [
   "received",

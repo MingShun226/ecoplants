@@ -1,10 +1,10 @@
 "use client";
 
-import { Boxes, ChevronDown, Ruler } from "lucide-react";
+import { Boxes, ChevronDown, Plus, Ruler, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AdjustStockForm } from "@/components/admin/stock-forms";
-import { updateVariant } from "@/lib/admin/catalogue-actions";
+import { createVariant, deleteVariant, updateVariant } from "@/lib/admin/catalogue-actions";
 import type { VariantRow } from "@/lib/admin/catalogue";
 import { formatSen } from "@/lib/admin/format";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { POT_COLOR_KEYS, POT_MATERIAL_KEYS } from "@/lib/admin/enums";
+import { POT_COLOR_KEYS, POT_MATERIAL_KEYS, SIZE_KEYS } from "@/lib/admin/enums";
 import { cn } from "@/lib/utils";
 
 /**
@@ -248,9 +248,16 @@ function VariantFields({ variant }: { variant: VariantRow }) {
         </p>
       ) : null}
 
-      <Button type="submit" size="sm" className="w-fit" disabled={pending || !dirty}>
-        {pending ? "Saving…" : saved ? "Saved" : "Save variant"}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button type="submit" size="sm" disabled={pending || !dirty}>
+          {pending ? "Saving…" : saved ? "Saved" : "Save variant"}
+        </Button>
+
+        {/* Removing sits at the far end of the row from saving, because the two
+            are not a pair of options — one is the ordinary reason this panel is
+            open and the other is not. */}
+        <DeleteVariant variantId={variant.id} label={variant.sizeKey} />
+      </div>
     </form>
   );
 }
@@ -306,6 +313,197 @@ function Field({
         {...props}
         className={cn("h-8 rounded-sm text-[13px]", mono && "numeric")}
       />
+    </div>
+  );
+}
+
+// --------------------------------------------------------------- add a size --
+
+/**
+ * Add a size to a plant that already exists.
+ *
+ * The four things that have no sensible default and would be wrong to guess.
+ * Pot, weight and dimensions come out of the defaults every first variant
+ * always got, and are corrected in the row this opens — asking for them here
+ * turns adding a size into filling in a form.
+ */
+export function NewVariantForm({ productId }: { productId: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [f, setF] = useState({ sizeKey: "medium", sku: "", price: "", stock: "0" });
+
+  if (!open) {
+    return (
+      <div className="border-t border-border-subtle px-5 py-3.5">
+        <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-2">
+          <Plus className="size-3.5" aria-hidden="true" />
+          Add a size
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError(null);
+        start(async () => {
+          const result = await createVariant(productId, {
+            sizeKey: f.sizeKey,
+            sku: f.sku,
+            // Edited in ringgit because that is what a person thinks in;
+            // converted to sen at the boundary (ADR 0002).
+            priceSen: Math.round(Number(f.price) * 100),
+            quantityOnHand: Math.round(Number(f.stock) || 0),
+          });
+          if (!result.ok) {
+            setError(result.error);
+            return;
+          }
+          setF({ sizeKey: "medium", sku: "", price: "", stock: "0" });
+          setOpen(false);
+          router.refresh();
+        });
+      }}
+      className="flex flex-col gap-3 border-t border-border-subtle px-5 py-4"
+    >
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-size" className="text-[11px]">
+            Size
+          </Label>
+          <Select value={f.sizeKey} onValueChange={(v) => setF({ ...f, sizeKey: v })}>
+            <SelectTrigger id="new-size" className="h-8 rounded-sm text-[13px] capitalize">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SIZE_KEYS.map((k) => (
+                <SelectItem key={k} value={k} className="capitalize">
+                  {k.replace("-", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Field
+          label="SKU"
+          id="new-sku"
+          value={f.sku}
+          onChange={(e) => setF({ ...f, sku: e.target.value })}
+          mono
+        />
+
+        <Field
+          label="Price (RM)"
+          id="new-price"
+          value={f.price}
+          onChange={(e) => setF({ ...f, price: e.target.value })}
+          type="number"
+          step="0.01"
+          min="0.01"
+        />
+
+        <Field
+          label="In stock"
+          id="new-stock"
+          value={f.stock}
+          onChange={(e) => setF({ ...f, stock: e.target.value })}
+          type="number"
+          min="0"
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          disabled={pending || f.sku.trim() === "" || Number(f.price) <= 0}
+        >
+          {pending ? "Adding…" : "Add size"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={pending}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+        >
+          Cancel
+        </Button>
+        <p className="text-[11px] leading-relaxed text-text-tertiary">
+          Pot, weight and dimensions get defaults you can correct in the row this opens.
+        </p>
+      </div>
+
+      {error ? (
+        <p role="alert" className="text-[12px] leading-relaxed text-danger">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
+/**
+ * Remove a size.
+ *
+ * Two presses, because it does not come back. Safe after it has sold — an
+ * order line keeps its own snapshot of the price, name and SKU — and refused
+ * for the last one, because a plant with no sizes cannot be bought.
+ */
+export function DeleteVariant({ variantId, label }: { variantId: string; label: string }) {
+  const router = useRouter();
+  const [armed, setArmed] = useState(false);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={armed ? "destructive" : "ghost"}
+          disabled={pending}
+          onClick={() => {
+            if (!armed) {
+              setArmed(true);
+              setError(null);
+              return;
+            }
+            start(async () => {
+              const result = await deleteVariant(variantId);
+              if (!result.ok) {
+                setError(result.error);
+                setArmed(false);
+                return;
+              }
+              router.refresh();
+            });
+          }}
+          className="gap-1.5"
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+          {pending ? "Removing…" : armed ? `Remove ${label} for good` : "Remove size"}
+        </Button>
+        {armed && !pending ? (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setArmed(false)}>
+            Cancel
+          </Button>
+        ) : null}
+      </div>
+      {error ? (
+        <p role="alert" className="max-w-md text-[12px] leading-relaxed text-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -18,10 +18,16 @@ import {
 /**
  * Adding a plant.
  *
- * Seven fields, and one of them fills itself in. This asks only for what has no
+ * Three fields, and one of them fills itself in. This asks only for what has no
  * sensible default and would be wrong to guess — what it is called, what it
  * costs, how many there are — then hands over to the detail page, which is
  * already built for the rest.
+ *
+ * Sizes are not among them any more either. The first one used to be created
+ * here, on the reasoning that a plant with no size cannot be bought — true, and
+ * it put a SKU, a price and a stock count in front of someone whose next act is
+ * to go and photograph the plant. It arrives with no sizes and the next screen
+ * says so, which is the same information without the form.
  *
  * Neither the internal reference nor the botanical name is among them. The ref
  * is derived from the name on the server and never shown to anyone; the
@@ -31,7 +37,6 @@ import {
  * deriving the moment it is edited by hand: auto-filling a field someone has
  * already corrected is worse than never filling it at all.
  */
-const SIZES = ["small", "medium", "large", "extra-large"];
 
 function slugify(input: string): string {
   return input
@@ -64,10 +69,6 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
     name: "",
     slug: "",
     categoryId: assignable[0]?.id ?? "",
-    sizeKey: "medium",
-    sku: "",
-    price: "",
-    stock: "0",
   });
 
   // Once it has been typed into, it belongs to the operator.
@@ -80,7 +81,7 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
       slug: slugTouched ? prev.slug : slugify(name),
     }));
 
-  const ready = f.name.trim() !== "" && f.sku.trim() !== "" && Number(f.price) > 0;
+  const ready = f.name.trim() !== "";
 
   return (
     <form
@@ -92,10 +93,6 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
             categoryId: f.categoryId,
             name: f.name,
             slug: f.slug,
-            sizeKey: f.sizeKey,
-            sku: f.sku,
-            priceSen: Math.round(Number(f.price) * 100),
-            quantityOnHand: Math.round(Number(f.stock) || 0),
           });
 
           if (result.ok) {
@@ -157,75 +154,6 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
         </div>
       </div>
 
-      {/* A product with no variant cannot be bought, so the first one is part of
-          creating the plant rather than a second job to remember. */}
-      <div className="flex flex-col gap-4 border-t border-border-subtle pt-5">
-        <div>
-          <h3 className="text-[13px] font-medium">The first size</h3>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-text-tertiary">
-            Nothing can be bought until a plant has one. Pot, weight and dimensions get
-            sensible defaults you can correct afterwards.
-          </p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sizeKey">Size</Label>
-            <Select value={f.sizeKey} onValueChange={(v) => setF({ ...f, sizeKey: v })}>
-              <SelectTrigger id="sizeKey" className="h-8 rounded-sm text-[13px] capitalize">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SIZES.map((s) => (
-                  <SelectItem key={s} value={s} className="capitalize">
-                    {s.replace("-", " ")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="sku">SKU</Label>
-            <Input
-              id="sku"
-              value={f.sku}
-              onChange={(e) => setF({ ...f, sku: e.target.value })}
-              placeholder="AGL-COM-M-CHA"
-              required
-              className="numeric h-8 rounded-sm text-[13px] uppercase"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="price">Price (RM)</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={f.price}
-              onChange={(e) => setF({ ...f, price: e.target.value })}
-              required
-              className="numeric h-8 rounded-sm text-[13px]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="stock">In stock</Label>
-            <Input
-              id="stock"
-              type="number"
-              min="0"
-              value={f.stock}
-              onChange={(e) => setF({ ...f, stock: e.target.value })}
-              required
-              className="numeric h-8 rounded-sm text-[13px]"
-            />
-          </div>
-        </div>
-      </div>
-
       {error ? (
         <p
           role="alert"
@@ -237,10 +165,11 @@ export function NewProductForm({ categories }: { categories: CategoryRow[] }) {
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-5">
         <Button type="submit" size="sm" disabled={pending || !ready}>
-          {pending ? "Creating…" : "Create, then add photos"}
+          {pending ? "Creating…" : "Create, then add sizes and photos"}
         </Button>
         <p className="text-[11px] leading-relaxed text-text-tertiary">
-          It arrives hidden from the shop. Publish it once it has photographs.
+          It arrives hidden, with no sizes. Add photographs and at least one size on the
+          next screen, then publish it.
         </p>
       </div>
     </form>

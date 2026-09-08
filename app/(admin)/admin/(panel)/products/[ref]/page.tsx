@@ -13,7 +13,7 @@ import {
 import { AiAssistCard, AiAssistProvider } from "@/components/admin/ai-assist";
 import { ImageManager } from "@/components/admin/image-manager";
 import { NewArrivalControl } from "@/components/admin/misc-forms";
-import { VariantEditor } from "@/components/admin/variant-editor";
+import { NewVariantForm, VariantEditor } from "@/components/admin/variant-editor";
 import { getProduct, listCategories } from "@/lib/admin/catalogue";
 import { formatSen } from "@/lib/admin/format";
 import { MAX_IMAGES_PER_PRODUCT } from "@/lib/admin/enums";
@@ -129,7 +129,7 @@ export default async function ProductDetailPage({
           <AdminCard title="Variants, prices and stock" flush>
             {product.variants.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-text-tertiary">
-                No variants. Nothing can be bought until there is at least one.
+                No sizes yet. Nothing can be bought until there is at least one.
               </p>
             ) : (
               <ul className="divide-y divide-border-subtle">
@@ -138,12 +138,11 @@ export default async function ProductDetailPage({
                 ))}
               </ul>
             )}
-            <p className="border-t border-border-subtle px-5 py-3 text-[11px] leading-relaxed text-text-tertiary">
-              Adding or removing a variant is not possible here yet — a variant carries a
-              SKU, an inventory row and price snapshots on historical orders, and getting
-              that wrong breaks orders that already reference it. Everything about an
-              existing one, stock included, is editable above.
-            </p>
+
+            {/* This used to say adding a size was not possible here, and it was
+                not: the only one a plant ever had was the one created with it.
+                A shop that later stocks a second pot size can say so now. */}
+            <NewVariantForm productId={product.id} />
           </AdminCard>
 
           {/* Set once when the plant is first listed, then left alone for

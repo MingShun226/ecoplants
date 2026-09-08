@@ -517,6 +517,147 @@ export async function removeCategoryImage(categoryId: string): Promise<ActionRes
   return { ok: true };
 }
 
+// ------------------------------------------------------- add & drop a size --
+
+/**
+ * Add a size to a plant that already exists.
+ *
+ * Until this existed, the only way to get a variant was to create one in the
+ * same breath as the product — so a shop that later stocked a second pot size
+ * had no way to say so, and the page said as much. Creating the plant and
+ * deciding what sizes it comes in are two jobs, done at different times by
+ * someone holding different information.
+ *
+ * The dimensions and the pot get the same defaults the first variant always
+ * got, and are corrected in the row this opens. Asking for weight, height and
+ * pot diameter before the plant is even listed is how a form stops being
+ * filled in.
+ */
+export async function createVariant(
+  productId: string,
+  input: { sizeKey: string; sku: string; priceSen: number; quantityOnHand: number },
+): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const sku = input.sku.trim().toUpperCase();
+  if (!/^[A-Z0-9-]{3,32}$/.test(sku)) {
+    return { ok: false, error: "SKU should be 3–32 characters: letters, digits and hyphens." };
+  }
+  if (!input.sizeKey.trim()) {
+    return { ok: false, error: "A size is required — it is what the customer picks between." };
+  }
+
+  const supabase = await createClient();
+
+  // After whatever is already there, so a new size lands at the end of the
+  // picker rather than in the middle of an order somebody arranged.
+  const { data: siblings } = await supabase
+    .from("product_variants")
+    .select("position")
+    .eq("product_id", productId);
+
+  const position =
+    ((siblings ?? []) as { position: number }[]).reduce((n, r) => Math.max(n, r.position), -1) + 1;
+
+  const { data: created, error } = await supabase
+    .from("product_variants")
+    .insert({
+      product_id: productId,
+      sku,
+      size_key: input.sizeKey.trim(),
+      pot_color_key: "terracotta",
+      pot_material_key: "plastic",
+      price_sen: input.priceSen,
+      weight_grams: 1500,
+      height_cm: 40,
+      pot_diameter_cm: 14,
+      position,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return {
+      ok: false,
+      error: /duplicate|unique/i.test(error.message)
+        ? `The SKU ${sku} is already in use.`
+        : error.message,
+    };
+  }
+
+  // The inventory row is created by a trigger at zero, so opening stock is an
+  // ordinary movement and the first plants to arrive appear in the audit trail
+  // exactly like every delivery after them.
+  const variantId = (created as { id: string }).id;
+  if (input.quantityOnHand > 0) {
+    const { error: stockError } = await supabase.rpc("adjust_stock", {
+      p_variant_id: variantId,
+      p_delta: input.quantityOnHand,
+      p_reason: "received",
+      p_note: "Opening stock",
+    });
+    if (stockError) {
+      await supabase.from("product_variants").delete().eq("id", variantId);
+      return { ok: false, error: clean(stockError.message) };
+    }
+  }
+
+  revalidatePath("/admin/products", "layout");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Remove a size.
+ *
+ * Safe to do even after it has sold, and deliberately so: an order line
+ * snapshots the price, the product name, the variant label and the SKU at the
+ * moment of sale, and `order_items.variant_id` is nullable `on delete set
+ * null` precisely so a discontinued size can go without rewriting what was
+ * bought. The receipt keeps saying what it always said; the line simply stops
+ * pointing at a row that no longer exists.
+ *
+ * The one refusal is the last one. A plant with no sizes cannot be bought and
+ * the page says so, but walking into that while tidying up is not the same as
+ * choosing it — so it takes the deliberate act of hiding the plant instead.
+ */
+export async function deleteVariant(variantId: string): Promise<ActionResult> {
+  const denied = await guard();
+  if (denied) return denied;
+
+  const supabase = await createClient();
+
+  const { data: row } = await supabase
+    .from("product_variants")
+    .select("product_id")
+    .eq("id", variantId)
+    .maybeSingle();
+
+  if (!row) return { ok: false, error: "That size no longer exists." };
+
+  const { count } = await supabase
+    .from("product_variants")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", (row as { product_id: string }).product_id);
+
+  if ((count ?? 0) <= 1) {
+    return {
+      ok: false,
+      error:
+        "This is the only size, and a plant with no sizes cannot be bought. " +
+        "Add another first, or hide the plant from the shop.",
+    };
+  }
+
+  const { error } = await supabase.from("product_variants").delete().eq("id", variantId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/admin/products", "layout");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 // ---------------------------------------------------- create & delete category --
 
 /**
@@ -670,10 +811,6 @@ export interface NewProductInput {
   categoryId: string;
   name: string;
   slug: string;
-  sizeKey: string;
-  sku: string;
-  priceSen: number;
-  quantityOnHand: number;
 }
 
 /**
@@ -684,10 +821,16 @@ export interface NewProductInput {
  * true at the instant the row is created — so publishing stays a separate,
  * deliberate act on the detail page rather than a side effect of typing a name.
  *
- * Only the fields with no sensible default are asked for. Malay and Chinese
- * copy, the care attributes, badges and further sizes are all edited afterwards
- * on a screen built for it. A create form that asks for everything is a form
- * nobody finishes.
+ * Only the fields with no sensible default are asked for. Sizes, Malay and
+ * Chinese copy, the care attributes and badges are all added afterwards on a
+ * screen built for it. A create form that asks for everything is a form nobody
+ * finishes.
+ *
+ * Sizes in particular. This used to create the first one here, on the
+ * reasoning that a product with no variant cannot be bought — true, and it put
+ * a SKU, a price and a stock count in front of someone whose next act is to go
+ * and photograph the plant. It arrives with no sizes and says so, which is the
+ * same information without the form.
  *
  * PostgREST has no multi-table transaction, so these inserts run in dependency
  * order and the product is rolled back by hand if a later one fails. A
@@ -709,7 +852,6 @@ export async function createProduct(
   const base = slugify(input.name);
   const slug = slugify(input.slug || input.name);
   const name = input.name.trim();
-  const sku = input.sku.trim().toUpperCase();
 
   if (!name) return { ok: false, error: "Give it a name." };
   if (!SLUG.test(base)) {
@@ -719,13 +861,6 @@ export async function createProduct(
     return { ok: false, error: "The web address needs to be lowercase letters, numbers and hyphens." };
   }
   if (!input.categoryId) return { ok: false, error: "Choose a category." };
-  if (!sku) return { ok: false, error: "Give the size a SKU." };
-  if (!Number.isInteger(input.priceSen) || input.priceSen <= 0) {
-    return { ok: false, error: "Give it a price above zero." };
-  }
-  if (!Number.isInteger(input.quantityOnHand) || input.quantityOnHand < 0) {
-    return { ok: false, error: "Stock cannot be negative." };
-  }
 
   const supabase = await createClient();
 
@@ -815,49 +950,6 @@ export async function createProduct(
     placement: "indoor",
   });
   if (attributes.error) return rollback(attributes.error.message);
-
-  const { data: variantRow, error: variantError } = await supabase
-    .from("product_variants")
-    .insert({
-      product_id: product.id,
-      sku,
-      size_key: input.sizeKey,
-      // A plain nursery pot, which is what a plant actually arrives in. This
-      // was "charcoal ceramic" — a specific, premium pot asserted about every
-      // product nobody had told us the pot of. Corrected per variant below.
-      pot_color_key: "terracotta",
-      pot_material_key: "plastic",
-      price_sen: input.priceSen,
-      weight_grams: 1500,
-      height_cm: 40,
-      pot_diameter_cm: 14,
-      position: 0,
-    })
-    .select("id")
-    .single();
-
-  if (variantError) {
-    return rollback(
-      /duplicate|unique/i.test(variantError.message)
-        ? `The SKU ${sku} is already in use.`
-        : variantError.message,
-    );
-  }
-
-  // The inventory row is created by a trigger (migration 0031), at zero.
-  // Opening stock is then an ordinary movement, so the first plants to arrive
-  // appear in the audit trail exactly like every delivery after them — rather
-  // than the count starting at a number nobody can account for.
-  const variantId = (variantRow as { id: string }).id;
-  if (input.quantityOnHand > 0) {
-    const { error: stockError } = await supabase.rpc("adjust_stock", {
-      p_variant_id: variantId,
-      p_delta: input.quantityOnHand,
-      p_reason: "received",
-      p_note: "Opening stock",
-    });
-    if (stockError) return rollback(clean(stockError.message));
-  }
 
   revalidatePath("/admin/products", "layout");
   revalidatePath("/", "layout");

@@ -4,6 +4,14 @@ import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import {
+  FITTED,
+  clampScale,
+  clampView,
+  pinchView,
+  zoomAbout,
+  type View,
+} from "@/lib/ui/zoom";
 import type { ProductImage } from "@/types/catalog";
 
 const MIN_ZOOM = 1;
@@ -19,15 +27,6 @@ const SWIPE_X = 60;
 const SWIPE_Y = 110;
 /** Two taps closer together than this are a double tap. */
 const DOUBLE_TAP_MS = 300;
-
-/** Everything about how the picture is currently placed. */
-interface View {
-  scale: number;
-  x: number;
-  y: number;
-}
-
-const FITTED: View = { scale: 1, x: 0, y: 0 };
 
 /**
  * The full-screen photograph.
@@ -153,19 +152,21 @@ export function ImageLightbox({
    * the scaled picture overflows the stage, which is nothing at all until it
    * is larger than the stage in that direction.
    */
+  /** Measure the frame, then let `clampView` decide. */
   const clamp = useCallback((next: View): View => {
     const box = stage.current;
     const img = picture.current;
     if (!box || !img) return next;
 
-    const limitX = Math.max(0, (img.offsetWidth * next.scale - box.clientWidth) / 2);
-    const limitY = Math.max(0, (img.offsetHeight * next.scale - box.clientHeight) / 2);
-
-    return {
-      scale: next.scale,
-      x: Math.min(limitX, Math.max(-limitX, next.x)),
-      y: Math.min(limitY, Math.max(-limitY, next.y)),
-    };
+    return clampView(next, {
+      // `offsetWidth` is the laid-out size, unaffected by the transform — which
+      // is what the arithmetic wants. The stage is measured including its
+      // padding, because a magnified picture covers that too.
+      imageWidth: img.offsetWidth,
+      imageHeight: img.offsetHeight,
+      stageWidth: box.clientWidth,
+      stageHeight: box.clientHeight,
+    });
   }, []);
 
   /**
@@ -176,25 +177,22 @@ export function ImageLightbox({
    * difference: a point at `p` sits over image coordinate `(p - x) / scale`,
    * and holding it still across a scale change is the line below.
    */
+  /** Zoom about a point on screen. What a double tap and the buttons do. */
   const zoomAt = useCallback(
     (nextScale: number, clientX: number, clientY: number) => {
       const box = stage.current;
       if (!box) return;
-
       const rect = box.getBoundingClientRect();
-      const current = live.current;
-      const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextScale));
-      const ratio = scale / current.scale;
-
-      const px = clientX - rect.left - rect.width / 2;
-      const py = clientY - rect.top - rect.height / 2;
 
       apply(
-        clamp({
-          scale,
-          x: px - (px - current.x) * ratio,
-          y: py - (py - current.y) * ratio,
-        }),
+        clamp(
+          zoomAbout(
+            live.current,
+            clampScale(nextScale, MIN_ZOOM, MAX_ZOOM),
+            clientX - rect.left - rect.width / 2,
+            clientY - rect.top - rect.height / 2,
+          ),
+        ),
       );
     },
     [apply, clamp],
@@ -282,9 +280,33 @@ export function ImageLightbox({
     from.current.moved = Math.max(from.current.moved, Math.hypot(dx, dy));
 
     if (pointers.current.size === 2 && from.current.dist > 0) {
-      // Pinch. Scaled from where the gesture began rather than from the last
-      // frame, so rounding cannot accumulate into drift.
-      zoomAt(from.current.view.scale * (spread() / from.current.dist), c.x, c.y);
+      /*
+       * Pinch, solved from where the gesture began rather than stepped from
+       * the frame before. `pinchView` carries the reasoning and the tests
+       * beside it carry the proof — this is the measuring.
+       */
+      const box = stage.current;
+      if (!box) return;
+      const rect = box.getBoundingClientRect();
+      const toStage = (x: number, y: number) => ({
+        x: x - rect.left - rect.width / 2,
+        y: y - rect.top - rect.height / 2,
+      });
+
+      apply(
+        clamp(
+          pinchView(
+            from.current.view,
+            toStage(from.current.x, from.current.y),
+            toStage(c.x, c.y),
+            clampScale(
+              from.current.view.scale * (spread() / from.current.dist),
+              MIN_ZOOM,
+              MAX_ZOOM,
+            ),
+          ),
+        ),
+      );
       return;
     }
 

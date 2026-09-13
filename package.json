@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test scripts/test-ai-assist.mjs",
+    "test": "node --experimental-strip-types --test scripts/test-ai-assist.mjs scripts/test-zoom.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "dump:seed": "node scripts/dump-seed.mjs"
   },

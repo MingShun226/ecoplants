@@ -186,6 +186,33 @@ export function ImageLightbox({
     setLevel(2);
   };
 
+  /**
+   * Whether the shopper has pinched in, on a phone.
+   *
+   * The strip snaps horizontally, so a sideways drag scrolls it — which is
+   * right at normal size and wrong the moment the picture is magnified, where
+   * the same drag is the only way to look at the left of it. Pinch is the
+   * browser's own visual-viewport zoom, and `visualViewport.scale` is where it
+   * reports it, so the strip can simply stop scrolling while it is above one.
+   *
+   * A margin on the comparison because the scale is a float and settles a hair
+   * off 1 after a pinch that ends back where it started.
+   */
+  const [pinched, setPinched] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || !open) return;
+
+    const read = () => setPinched(vv.scale > 1.05);
+    read();
+    vv.addEventListener("resize", read);
+    vv.addEventListener("scroll", read);
+    return () => {
+      vv.removeEventListener("resize", read);
+      vv.removeEventListener("scroll", read);
+    };
+  }, [open]);
+
   const close = () => ref.current?.close();
 
   /** Which photograph the swipe landed on, so the page behind can follow it. */
@@ -222,7 +249,14 @@ export function ImageLightbox({
             <div
               ref={strip}
               onScroll={onStripScroll}
-              className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-contain"
+              className={cn(
+                "flex h-full w-full overscroll-contain",
+                // Magnified, the strip stops being a strip: it holds still and
+                // hands the drag to the browser, which pans the picture.
+                pinched
+                  ? "overflow-hidden touch-auto"
+                  : "snap-x snap-mandatory overflow-x-auto",
+              )}
             >
               {images.map((img) => (
                 <div
@@ -255,7 +289,7 @@ export function ImageLightbox({
 
             {/* Dots, not a fraction: a count of two or three is read faster as
                 shapes than as "1 / 3", and they double as the position. */}
-            {images.length > 1 ? (
+            {images.length > 1 && !pinched ? (
               <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center gap-1.5">
                 {images.map((img, i) => (
                   <span

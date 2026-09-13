@@ -8,37 +8,48 @@ import type { ProductImage } from "@/types/catalog";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
-/** Where a double tap lands, and what the zoom-in button steps toward. */
+/** Where a double tap lands, and the step the buttons move by. */
 const TAP_ZOOM = 2.5;
 
 /** A drag shorter than this is a tap; longer, and it was going somewhere. */
 const TAP_SLOP = 10;
-/** How far sideways a one-finger drag has to go, unzoomed, to change picture. */
-const SWIPE_THRESHOLD = 60;
+/** How far sideways a drag has to go, unzoomed, to change picture. */
+const SWIPE_X = 60;
+/** How far down it has to go to dismiss. */
+const SWIPE_Y = 110;
 /** Two taps closer together than this are a double tap. */
 const DOUBLE_TAP_MS = 300;
+
+/** Everything about how the picture is currently placed. */
+interface View {
+  scale: number;
+  x: number;
+  y: number;
+}
+
+const FITTED: View = { scale: 1, x: 0, y: 0 };
 
 /**
  * The full-screen photograph.
  *
- * **It owns its own zoom.** This used to lean on the browser's pinch — which
- * magnifies the viewport, not the picture, and took the black surround, the
- * close button and the page behind it along for the ride. It also could not be
- * asked anything: no double tap, no way to tell a pan from a swipe, and no way
- * to put it back, so zooming out left the strip stranded between two
- * photographs. Every one of those is the same bug wearing a different hat.
+ * **It owns its own zoom.** Borrowing the browser's pinch magnifies the
+ * viewport rather than the picture, which took the black surround and the close
+ * button along with it, left a double tap with nothing listening, and stranded
+ * the strip between two photographs on the way back out.
  *
  * So the gestures are handled here, on the picture, with `touch-action: none`
- * to stop the browser competing for them:
+ * to stop the browser competing:
  *
- * - pinch with two fingers to scale about the midpoint
- * - drag with one to pan, but only while magnified
- * - drag sideways while it fits to change picture
+ * - pinch to scale about the midpoint
+ * - drag to pan, while magnified
+ * - drag sideways, while it fits, to change picture
+ * - drag downwards, while it fits, to dismiss — the picture follows the finger
  * - double tap to toggle between fitting and 2.5x, at the point tapped
  *
- * Built on the native `<dialog>`, which brings the focus trap, the Escape key
- * and the top layer from the platform. A pointer keeps the arrows and the zoom
- * steps in the bar, because a mouse has neither a pinch nor a swipe.
+ * The live transform lives in a ref and is mirrored into state for rendering.
+ * A pinch fires pointer events faster than React commits, and reading the last
+ * committed value each time made a gesture fight its own history — which is
+ * what made zooming appear to shift the picture sideways.
  */
 export function ImageLightbox({
   images,
@@ -57,14 +68,28 @@ export function ImageLightbox({
   const t = useTranslations("product");
   const ref = useRef<HTMLDialogElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+  const picture = useRef<HTMLImageElement>(null);
 
-  /** 1 fits the frame. Above it the picture is magnified and can be dragged. */
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  /** The truth during a gesture. */
+  const live = useRef<View>({ ...FITTED });
+  /** The same thing, for rendering. */
+  const [view, setView] = useState<View>({ ...FITTED });
+  /** How far a dismissal drag has come. Separate, because it is not a pan. */
+  const [dismiss, setDismiss] = useState(0);
 
-  const zoomed = scale > 1.01;
+  const zoomed = view.scale > 1.01;
   const open = index !== null;
   const image = open ? images[index] : null;
+
+  const apply = useCallback((next: View) => {
+    live.current = next;
+    setView(next);
+  }, []);
+
+  const reset = useCallback(() => {
+    apply({ ...FITTED });
+    setDismiss(0);
+  }, [apply]);
 
   // `showModal()` is what puts the dialog in the top layer and makes the rest
   // of the page inert; rendering `open` as an attribute does neither.
@@ -88,20 +113,27 @@ export function ImageLightbox({
     };
   }, [open]);
 
-  const reset = useCallback(() => {
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
-  }, []);
-
   // A new photograph is a new thing to look at, so it arrives fitting. Adjusted
   // during render rather than in an effect, so it never paints once at the
   // outgoing picture's magnification before snapping back.
   const [seenIndex, setSeenIndex] = useState(index);
   if (seenIndex !== index) {
     setSeenIndex(index);
-    setScale(1);
-    setOffset({ x: 0, y: 0 });
+    setView({ ...FITTED });
+    setDismiss(0);
   }
+
+  /**
+   * Keep the gesture's copy in step with the rendered one.
+   *
+   * `apply` writes both at once, so within a gesture the ref is already
+   * current — this is for the changes that come from elsewhere: a new
+   * photograph, a keypress, the buttons. Writing the ref during render instead
+   * would be a side effect in a place React is free to run twice.
+   */
+  useEffect(() => {
+    live.current = view;
+  }, [view]);
 
   const move = useCallback(
     (delta: number) => {
@@ -114,56 +146,69 @@ export function ImageLightbox({
   /**
    * Keep the picture over the frame.
    *
-   * At scale `s` the picture is `s` times the frame, so it can travel half the
-   * difference in each direction before an edge comes inside the frame and
-   * leaves a gap. Clamping here rather than after the gesture means a drag that
-   * runs past the edge simply stops, instead of springing back when released.
+   * Measured against the *picture*, not the frame. The image is fitted, so at
+   * rest it is usually narrower or shorter than the stage — clamping to the
+   * stage let it be dragged until an edge came inside and left a gap, and
+   * yanked it back on the next zoom. What can travel is half of however much
+   * the scaled picture overflows the stage, which is nothing at all until it
+   * is larger than the stage in that direction.
    */
-  const clamp = useCallback((next: { x: number; y: number }, s: number) => {
-    const el = stage.current;
-    if (!el) return next;
-    const limitX = Math.max(0, (el.clientWidth * (s - 1)) / 2);
-    const limitY = Math.max(0, (el.clientHeight * (s - 1)) / 2);
+  const clamp = useCallback((next: View): View => {
+    const box = stage.current;
+    const img = picture.current;
+    if (!box || !img) return next;
+
+    const limitX = Math.max(0, (img.offsetWidth * next.scale - box.clientWidth) / 2);
+    const limitY = Math.max(0, (img.offsetHeight * next.scale - box.clientHeight) / 2);
+
     return {
+      scale: next.scale,
       x: Math.min(limitX, Math.max(-limitX, next.x)),
       y: Math.min(limitY, Math.max(-limitY, next.y)),
     };
   }, []);
 
   /**
-   * Zoom about a point, so what was under the finger stays under it.
+   * Zoom about a point, so what is under the fingers stays under them.
    *
-   * The offset is measured from the middle of the frame, so the point's
-   * distance from that middle scales with the picture and the offset has to
-   * absorb the difference.
+   * The offset is measured from the middle of the stage, so a point's distance
+   * from that middle grows with the picture and the offset has to absorb the
+   * difference: a point at `p` sits over image coordinate `(p - x) / scale`,
+   * and holding it still across a scale change is the line below.
    */
   const zoomAt = useCallback(
     (nextScale: number, clientX: number, clientY: number) => {
-      const el = stage.current;
-      if (!el) return;
-      const box = el.getBoundingClientRect();
-      const s = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextScale));
+      const box = stage.current;
+      if (!box) return;
 
-      setScale((current) => {
-        const ratio = s / current;
-        const px = clientX - box.left - box.width / 2;
-        const py = clientY - box.top - box.height / 2;
-        setOffset((o) => clamp({ x: px - (px - o.x) * ratio, y: py - (py - o.y) * ratio }, s));
-        return s;
-      });
+      const rect = box.getBoundingClientRect();
+      const current = live.current;
+      const scale = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextScale));
+      const ratio = scale / current.scale;
+
+      const px = clientX - rect.left - rect.width / 2;
+      const py = clientY - rect.top - rect.height / 2;
+
+      apply(
+        clamp({
+          scale,
+          x: px - (px - current.x) * ratio,
+          y: py - (py - current.y) * ratio,
+        }),
+      );
     },
-    [clamp],
+    [apply, clamp],
   );
 
   /** Step the zoom about the middle. What the buttons and the keys do. */
   const step = useCallback(
     (delta: number) => {
-      const el = stage.current;
-      if (!el) return;
-      const box = el.getBoundingClientRect();
-      zoomAt(scale + delta, box.left + box.width / 2, box.top + box.height / 2);
+      const box = stage.current;
+      if (!box) return;
+      const rect = box.getBoundingClientRect();
+      zoomAt(live.current.scale + delta, rect.left + rect.width / 2, rect.top + rect.height / 2);
     },
-    [scale, zoomAt],
+    [zoomAt],
   );
 
   useEffect(() => {
@@ -184,22 +229,26 @@ export function ImageLightbox({
 
   // ------------------------------------------------------------- gestures --
 
-  /** Live pointers, so one finger and two are the same code path. */
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  /**
-   * The same fact, as state, because the transition below is decided during
-   * render and a ref read there is not something React can see changing.
-   */
-  const [gesturing, setGesturing] = useState(false);
   /** What the gesture started from, so it is measured rather than accumulated. */
-  const from = useRef({ dist: 0, scale: 1, offset: { x: 0, y: 0 }, x: 0, y: 0, moved: 0 });
+  const from = useRef({ dist: 0, view: FITTED, x: 0, y: 0, moved: 0 });
+  /**
+   * Which way a one-finger drag turned out to be going.
+   *
+   * Decided once, a few pixels in, and held for the rest of the gesture — so a
+   * swipe that drifts does not switch from changing the picture to dismissing
+   * it halfway through.
+   */
+  const axis = useRef<"x" | "y" | null>(null);
   const lastTap = useRef(0);
+  const [gesturing, setGesturing] = useState(false);
 
   const centre = () => {
     const list = [...pointers.current.values()];
-    const x = list.reduce((a, p) => a + p.x, 0) / list.length;
-    const y = list.reduce((a, p) => a + p.y, 0) / list.length;
-    return { x, y };
+    return {
+      x: list.reduce((a, p) => a + p.x, 0) / list.length,
+      y: list.reduce((a, p) => a + p.y, 0) / list.length,
+    };
   };
 
   const spread = () => {
@@ -211,12 +260,12 @@ export function ImageLightbox({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setGesturing(true);
+    axis.current = null;
 
     const c = centre();
     from.current = {
       dist: pointers.current.size === 2 ? spread() : 0,
-      scale,
-      offset,
+      view: live.current,
       x: c.x,
       y: c.y,
       moved: 0,
@@ -227,52 +276,51 @@ export function ImageLightbox({
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    const count = pointers.current.size;
     const c = centre();
-    from.current.moved = Math.max(
-      from.current.moved,
-      Math.hypot(c.x - from.current.x, c.y - from.current.y),
-    );
+    const dx = c.x - from.current.x;
+    const dy = c.y - from.current.y;
+    from.current.moved = Math.max(from.current.moved, Math.hypot(dx, dy));
 
-    if (count === 2 && from.current.dist > 0) {
-      // Pinch. Scale from where the gesture began rather than from the last
+    if (pointers.current.size === 2 && from.current.dist > 0) {
+      // Pinch. Scaled from where the gesture began rather than from the last
       // frame, so rounding cannot accumulate into drift.
-      const next = from.current.scale * (spread() / from.current.dist);
-      zoomAt(next, c.x, c.y);
+      zoomAt(from.current.view.scale * (spread() / from.current.dist), c.x, c.y);
       return;
     }
 
-    if (count === 1 && zoomed) {
-      // Pan. Only while magnified: unzoomed, a sideways drag is a swipe, and
-      // deciding which it was belongs at the end of the gesture.
-      setOffset(
-        clamp(
-          {
-            x: from.current.offset.x + (c.x - from.current.x),
-            y: from.current.offset.y + (c.y - from.current.y),
-          },
-          scale,
-        ),
-      );
+    if (pointers.current.size !== 1) return;
+
+    if (zoomed) {
+      apply(clamp({ scale: live.current.scale, x: from.current.view.x + dx, y: from.current.view.y + dy }));
+      return;
     }
+
+    // Unzoomed. Which way this drag is going gets decided once and kept.
+    if (!axis.current && from.current.moved > TAP_SLOP) {
+      axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    // Downwards only, and the picture follows the finger so the gesture shows
+    // its own result before it is committed.
+    if (axis.current === "y") setDismiss(Math.max(0, dy));
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
     const wasSingle = pointers.current.size === 1;
-    const travelled = from.current.moved;
-    const startX = from.current.x;
+    const { moved, x: startX, y: startY } = from.current;
+    const direction = axis.current;
+
     pointers.current.delete(e.pointerId);
     if (pointers.current.size === 0) setGesturing(false);
 
     if (!wasSingle) return;
 
     // A tap: nothing moved.
-    if (travelled < TAP_SLOP) {
+    if (moved < TAP_SLOP) {
       const now = Date.now();
       if (now - lastTap.current < DOUBLE_TAP_MS) {
         lastTap.current = 0;
-        // Toggle. Zoomed in, a double tap is how you get back out — which is
-        // the step that used to leave the viewer stranded.
+        // Zoomed in, a double tap is the way back out — the step that used to
+        // leave the viewer stranded.
         if (zoomed) reset();
         else zoomAt(TAP_ZOOM, e.clientX, e.clientY);
         return;
@@ -281,13 +329,27 @@ export function ImageLightbox({
       return;
     }
 
-    // A drag, while the picture fits: that is a swipe between photographs.
-    if (!zoomed && Math.abs(e.clientX - startX) > SWIPE_THRESHOLD) {
+    if (zoomed) return;
+
+    if (direction === "x" && Math.abs(e.clientX - startX) > SWIPE_X) {
       move(e.clientX < startX ? 1 : -1);
+      return;
+    }
+
+    if (direction === "y") {
+      if (e.clientY - startY > SWIPE_Y) {
+        ref.current?.close();
+        return;
+      }
+      // Not far enough. Back where it came from.
+      setDismiss(0);
     }
   };
 
   const close = () => ref.current?.close();
+
+  /** Fades the surround as the picture is dragged away from it. */
+  const dismissProgress = Math.min(1, dismiss / (SWIPE_Y * 2));
 
   return (
     <dialog
@@ -301,6 +363,7 @@ export function ImageLightbox({
         "m-0 h-full max-h-none w-full max-w-none bg-transparent p-0",
         "backdrop:bg-ink-950/95 backdrop:backdrop-blur-sm",
       )}
+      style={{ opacity: 1 - dismissProgress * 0.6 }}
     >
       {image ? (
         <div className="flex h-full w-full flex-col">
@@ -308,7 +371,7 @@ export function ImageLightbox({
             <p className="min-w-0 truncate text-[13px] text-ink-50/80">
               <span className="hidden sm:inline">{image.alt || alt}</span>
               {images.length > 1 ? (
-                <span className="numeric sm:ml-2 text-ink-50/50">
+                <span className="numeric text-ink-50/50 sm:ml-2">
                   {(index ?? 0) + 1}/{images.length}
                 </span>
               ) : null}
@@ -320,7 +383,7 @@ export function ImageLightbox({
               <button
                 type="button"
                 onClick={() => step(-0.5)}
-                disabled={scale <= MIN_ZOOM}
+                disabled={view.scale <= MIN_ZOOM}
                 aria-label={t("zoomOut")}
                 className="hidden size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50 sm:flex"
               >
@@ -331,13 +394,13 @@ export function ImageLightbox({
                 aria-live="polite"
                 className="numeric hidden w-10 text-center text-[12px] tabular-nums text-ink-50/70 sm:block"
               >
-                {scale.toFixed(1)}&times;
+                {view.scale.toFixed(1)}&times;
               </span>
 
               <button
                 type="button"
                 onClick={() => step(0.5)}
-                disabled={scale >= MAX_ZOOM}
+                disabled={view.scale >= MAX_ZOOM}
                 aria-label={t("zoomIn")}
                 className="hidden size-9 items-center justify-center rounded-full text-ink-50/80 transition-colors hover:bg-ink-50/10 hover:text-ink-50 disabled:pointer-events-none disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-50 sm:flex"
               >
@@ -375,8 +438,8 @@ export function ImageLightbox({
               onPointerCancel={onPointerUp}
               onClick={(e) => {
                 // Only the surround, and only while the picture fits — a tap
-                // beside a magnified photo is far more likely to be a missed
-                // pan than a request to leave.
+                // beside a magnified photo is far likelier to be a missed pan
+                // than a request to leave.
                 if (e.target === e.currentTarget && !zoomed) close();
               }}
               className={cn(
@@ -388,18 +451,21 @@ export function ImageLightbox({
                 A plain <img>, not next/image. `fill` would make the element box
                 the whole frame whatever the picture's shape, so the empty space
                 beside a portrait shot would count as part of the image — and
-                that space is what has to close the viewer.
+                that space is what has to close the viewer. Its own box also
+                being the painted box is what lets the clamp above measure
+                against the picture rather than the frame.
               */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
+                ref={picture}
                 key={image.id}
                 src={image.src}
                 alt={image.alt || alt}
                 draggable={false}
                 style={{
-                  transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${scale})`,
+                  transform: `translate3d(${view.x}px, ${view.y + dismiss}px, 0) scale(${view.scale})`,
                   // Only while it is settling. Animating a pinch fights the
-                  // fingers, which feels like lag rather than smoothness.
+                  // fingers, which reads as lag rather than smoothness.
                   transition: gesturing ? "none" : "transform 180ms ease-out",
                 }}
                 className="max-h-full max-w-full object-contain will-change-transform"
@@ -415,7 +481,7 @@ export function ImageLightbox({
 
           {/* Dots, not a fraction: two or three are read faster as shapes, and
               they double as the position. Hidden while magnified, where they
-              sit over the part being looked at. */}
+              would sit over the part being looked at. */}
           {images.length > 1 && !zoomed ? (
             <div className="pointer-events-none flex shrink-0 justify-center gap-1.5 pb-5 sm:hidden">
               {images.map((img, i) => (

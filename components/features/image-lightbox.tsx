@@ -239,6 +239,16 @@ export function ImageLightbox({
    */
   const axis = useRef<"x" | "y" | null>(null);
   const lastTap = useRef(0);
+  /**
+   * Whether the gesture began on the picture or on the space around it.
+   *
+   * Read at pointer-down and kept, because `setPointerCapture` redirects every
+   * event after it — including the click — at the element holding the capture.
+   * Asking "was this click on the stage itself?" therefore answered yes for
+   * every click, and closing on that answer meant clicking the picture quit the
+   * viewer instead of zooming it.
+   */
+  const onPicture = useRef(false);
   const [gesturing, setGesturing] = useState(false);
 
   const centre = () => {
@@ -255,6 +265,10 @@ export function ImageLightbox({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
+    // Before the capture below, while the target is still what was under the
+    // pointer.
+    onPicture.current = picture.current?.contains(e.target as Node) ?? false;
+
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setGesturing(true);
@@ -338,11 +352,34 @@ export function ImageLightbox({
 
     // A tap: nothing moved.
     if (moved < TAP_SLOP) {
-      const now = Date.now();
+      // Beside the picture. A way out, but not while magnified — there a tap in
+      // the surround is far likelier to be a missed pan than a request to
+      // leave.
+      if (!onPicture.current) {
+        if (!zoomed) close();
+        return;
+      }
+
+      /*
+       * On the picture. A mouse zooms on a single click and a finger on a
+       * double tap, which is not an inconsistency: a finger's single tap is
+       * the start of half the other gestures here and has to stay ambiguous
+       * until it is clear it was not one of them. A mouse has no such problem,
+       * and `cursor-zoom-in` has been promising this all along.
+       */
+      if (e.pointerType === "mouse") {
+        if (zoomed) reset();
+        else zoomAt(TAP_ZOOM, e.clientX, e.clientY);
+        return;
+      }
+
+      // The event's own clock, not the wall clock: it is when the tap actually
+      // landed rather than when this ran, and it is monotonic, so a device
+      // adjusting its time mid-gesture cannot make two taps look simultaneous.
+      const now = e.timeStamp;
       if (now - lastTap.current < DOUBLE_TAP_MS) {
         lastTap.current = 0;
-        // Zoomed in, a double tap is the way back out — the step that used to
-        // leave the viewer stranded.
+        // Zoomed in, a double tap is the way back out.
         if (zoomed) reset();
         else zoomAt(TAP_ZOOM, e.clientX, e.clientY);
         return;
@@ -458,12 +495,6 @@ export function ImageLightbox({
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-              onClick={(e) => {
-                // Only the surround, and only while the picture fits — a tap
-                // beside a magnified photo is far likelier to be a missed pan
-                // than a request to leave.
-                if (e.target === e.currentTarget && !zoomed) close();
-              }}
               className={cn(
                 "flex h-full w-full touch-none select-none items-center justify-center overflow-hidden p-3 sm:p-10",
                 zoomed ? "cursor-grab" : "cursor-zoom-in",

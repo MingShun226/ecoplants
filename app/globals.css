@@ -386,9 +386,24 @@
        interruptible animation that routinely never lands — clicking a nav item
        leaves you halfway down the previous page. */
     -webkit-text-size-adjust: 100%;
+
+    /*
+     * Nothing spills sideways.
+     *
+     * Being able to drag a page left and right is almost never a zoom; it is
+     * one element a few pixels wider than the screen, and the browser letting
+     * you go and look at it. This is the backstop rather than the fix — an
+     * overflow still wants finding — but it stops the whole page sliding
+     * because of one of them.
+     *
+     * On `html` and not `body`: on iOS, `overflow-x: hidden` on `body` alone is
+     * widely ignored.
+     */
+    overflow-x: hidden;
   }
 
   body {
+    overflow-x: hidden;
     background-color: var(--canvas);
     color: var(--text-primary);
     font-family: var(--font-sans);

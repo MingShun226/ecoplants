@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Marcellus, Zilla_Slab } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -59,6 +59,24 @@ const zillaSlab = Zilla_Slab({
   variable: "--font-zilla",
   display: "swap",
 });
+
+/**
+ * One screen wide, at the size it was drawn.
+ *
+ * `maximumScale` and `userScalable` are honoured by Android and by desktop
+ * browsers, and deliberately ignored by iOS Safari since iOS 10 — Apple treats
+ * pinch as an accessibility guarantee a site may not withdraw, and they are
+ * right to. So this is not what stops the photo viewer being zoomed by the
+ * browser: the viewer handles its own gestures with `touch-action: none`, which
+ * works everywhere. This is for the rest of the page, where the intent is that
+ * there is nothing to zoom into because nothing is cut off.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

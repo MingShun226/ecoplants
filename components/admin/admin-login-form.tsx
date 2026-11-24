@@ -46,7 +46,7 @@ export function AdminLoginForm() {
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          pattern="[A-Za-z][A-Za-z0-9._-]{2,29}"
+          pattern="[A-Za-z][A-Za-z0-9._\-]{2,29}"
           placeholder="admin"
           required
           className="rounded-sm"

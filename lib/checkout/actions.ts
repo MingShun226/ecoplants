@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { CART_COOKIE, parse } from "@/lib/cart/cookie";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Placing an order.
@@ -49,7 +50,11 @@ export async function placeOrder(contact: CheckoutContact): Promise<PlaceOrderRe
     return { ok: false, error: "Your basket is empty." };
   }
 
-  const supabase = createPublicClient();
+  // The cookie-bound client, not the anonymous one: place_order() attaches the
+  // order to auth.uid(), and the anonymous client never carries a session, so
+  // a signed-in customer's order would land as a guest's and never show under
+  // "Your orders". A guest has no session either way and stays a guest.
+  const supabase = await createClient();
   const { data, error } = await supabase.rpc("place_order", {
     p_lines: lines.map((line) => ({ variant_id: line.v, quantity: line.q })),
     p_contact: {

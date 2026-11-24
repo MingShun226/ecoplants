@@ -12,6 +12,8 @@ import type { Locale } from "@/i18n/routing";
 import { getCategories, getCategoryImages, getFeaturedProducts } from "@/lib/data/queries";
 import { quizQuestions } from "@/lib/data/quiz";
 import { getSettings, whatsappUrl } from "@/lib/data/settings";
+import deliveryPhoto from "@/public/images/home-delivery.webp";
+import interiorPhoto from "@/public/images/home-interior.webp";
 
 /**
  * The landing page.
@@ -157,13 +159,27 @@ export default async function HomePage({
       <section className="container-page py-16 md:py-24">
         <RevealSection>
           <div className="flex flex-col gap-10 rounded-[2rem] bg-[var(--shop-green)] p-7 text-ink-50 sm:rounded-[2.5rem] sm:p-12 lg:p-16">
-            <DisplayHeading
-              lead={t("howHeading")}
-              accent={t("howHeadingAccent")}
-              size="sm"
-              className="max-w-2xl"
-              accentClassName="!text-[var(--shop-butter)]"
-            />
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+              <DisplayHeading
+                lead={t("howHeading")}
+                accent={t("howHeadingAccent")}
+                size="sm"
+                className="max-w-2xl"
+                accentClassName="!text-[var(--shop-butter)]"
+              />
+              {/* Illustrative, and the steps below say the same thing in
+                  words, so it is hidden from assistive technology. */}
+              <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-[1.5rem] lg:w-[24rem] xl:w-[28rem]">
+                <Image
+                  src={deliveryPhoto}
+                  alt=""
+                  aria-hidden="true"
+                  fill
+                  sizes="(max-width: 1024px) 90vw, 28rem"
+                  className="object-cover"
+                />
+              </div>
+            </div>
             <ol className="grid gap-8 md:grid-cols-3">
               {steps.map((n) => (
                 <li key={n} className="flex flex-col gap-3">
@@ -183,7 +199,17 @@ export default async function HomePage({
       <section className="container-page pb-16 md:pb-24">
         <RevealSection>
           <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-7 rounded-[2rem] bg-[var(--shop-peach)] p-7 text-ink-950 sm:rounded-[2.5rem] sm:p-12">
-            <div className="max-w-xl">
+            <div className="relative hidden aspect-square w-44 shrink-0 overflow-hidden rounded-[1.5rem] lg:block xl:w-52">
+              <Image
+                src={interiorPhoto}
+                alt=""
+                aria-hidden="true"
+                fill
+                sizes="13rem"
+                className="object-cover"
+              />
+            </div>
+            <div className="max-w-xl flex-1">
               <DisplayHeading
                 lead={t("finderHeading")}
                 accent={t("finderHeadingAccent")}

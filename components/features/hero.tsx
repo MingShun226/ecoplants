@@ -5,21 +5,21 @@ import { PlantImage } from "@/components/brand/plant-image";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { toMajor } from "@/lib/utils/format";
-import greenhouse from "@/public/images/hero-nursery.webp";
+import packing from "@/public/images/hero-packing.webp";
 import { fromPriceSen, type Product } from "@/types/catalog";
 
 /**
  * The hero: what the shop is, in one screen, on the page's own cream ground.
  *
  * Copy on the left, a small collage on the right — a plant you can buy today
- * under an arch, the greenhouse it comes from, and the one promise that sets
+ * under an arch, a plant being packed at the nursery bench, and the one promise that sets
  * this shop apart (packed at the nursery, driven to you).
  *
  * A server component with CSS-only entrance motion (`rise-in-lg`), so the
  * markup is complete and visible even if no bundle ever loads.
  *
  * The plant in the arch is a real product, passed in, and the whole tile links
- * to it. With nothing in the catalogue the arch shows the greenhouse instead
+ * to it. With nothing in the catalogue the arch shows the packing photo instead
  * and the collage drops to two tiles.
  */
 export async function Hero({ product }: { product?: Product }) {
@@ -107,7 +107,7 @@ export async function Hero({ product }: { product?: Product }) {
           }
         >
           <Image
-            src={greenhouse}
+            src={packing}
             alt={t("heroPhotoAlt")}
             fill
             priority={!product}

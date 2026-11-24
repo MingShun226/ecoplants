@@ -1,13 +1,11 @@
 import { ArrowLeft } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import Image from "next/image";
-import authBackdrop from "@/public/images/auth-foliage.webp";
+import authBackdrop from "@/public/images/auth-nursery.webp";
 import { DisplayHeading } from "@/components/brand/display-heading";
 import { Wordmark } from "@/components/brand/logo";
 import { RuledEyebrow } from "@/components/brand/primitives";
 import { Link } from "@/i18n/navigation";
-import { getSettings } from "@/lib/data/settings";
-import { toMajor } from "@/lib/utils/format";
 
 /**
  * The auth shell: brand on the left, form on the right.
@@ -23,21 +21,7 @@ import { toMajor } from "@/lib/utils/format";
  * pasted link both behave.
  */
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  const [t, ta, settings, format] = await Promise.all([
-    getTranslations("account"),
-    getTranslations("actions"),
-    getSettings(),
-    getFormatter(),
-  ]);
-
-  const stats = [
-    { value: `${settings.guaranteeDays}`, label: t("statGuarantee") },
-    {
-      value: format.number(toMajor(settings.freeShippingThresholdSen), "currencyWhole"),
-      label: t("statDelivery"),
-    },
-    { value: "3", label: t("statLanguages") },
-  ];
+  const [t, ta] = await Promise.all([getTranslations("account"), getTranslations("actions")]);
 
   return (
     <div className="flex min-h-dvh flex-col lg:h-dvh lg:flex-row lg:overflow-hidden">
@@ -48,20 +32,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           marketing to reach the thing they came for. The compact header inside
           `main` carries the brand on small screens instead. */}
       <aside className="on-dark-tokens relative isolate hidden flex-col justify-between overflow-hidden bg-ink-950 px-7 py-8 text-text-primary sm:px-10 lg:flex lg:h-full lg:w-[46%] lg:px-14 lg:py-12 xl:w-1/2">
-        {/*
-          A photograph now, where this was two generated plates.
-
-          It is a backdrop rather than a picture: shot into deep shade with the
-          light falling only on the right, so the half of the panel the words
-          sit on is close to black already. `object-cover` with the focal point
-          held right keeps the lit foliage in frame as the column narrows —
-          centring it would push the interesting half off the edge on a laptop
-          and leave the copy over the brightest part.
-
-          The scrim stays regardless. "Already dark" is not a contrast
-          guarantee across every crop at every height, and the headline is the
-          one thing here that has to stay readable.
-        */}
+        {/* A bright nursery aisle, sunk into deep green from the bottom up so
+            the headline has a dark ground, with a lighter wash at the top for
+            the wordmark. The scrims are what guarantee the contrast; the
+            photograph is free to be as bright as a nursery is. */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
           <Image
             src={authBackdrop}
@@ -70,11 +44,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             priority
             quality={82}
             sizes="(min-width: 1280px) 50vw, 46vw"
-            className="object-cover object-right"
+            className="object-cover"
           />
-          {/* Radial rather than linear: a linear wash leaves a visible seam
-              exactly where the headline sits. */}
-          <div className="grain absolute inset-0 bg-[radial-gradient(120%_90%_at_18%_78%,color-mix(in_oklab,var(--color-ink-950)_92%,transparent)_0%,color-mix(in_oklab,var(--color-ink-950)_70%,transparent)_45%,transparent_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-leaf-950 via-leaf-950/80 via-45% to-leaf-950/10" />
+          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-leaf-950/70 to-transparent" />
         </div>
 
         <Link
@@ -88,33 +61,21 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </Link>
 
         <div className="mt-10 max-w-lg lg:mt-0">
-          <RuledEyebrow>{t("brandEyebrow")}</RuledEyebrow>
+          <RuledEyebrow className="text-[var(--shop-butter)]" ruleClassName="bg-[var(--shop-butter)]">
+            {t("brandEyebrow")}
+          </RuledEyebrow>
           <DisplayHeading
             as="h2"
             lead={t("brandHeadline")}
             accent={t("brandHeadlineAccent")}
             size="lg"
             className="mt-5"
+            accentClassName="!text-[var(--shop-butter)]"
           />
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-text-secondary">
             {t("brandBody")}
           </p>
 
-          <dl className="mt-9 flex flex-wrap gap-x-9 gap-y-5">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <dt className="sr-only">{s.label}</dt>
-                <dd>
-                  <span className="numeric block font-display text-2xl leading-none">
-                    {s.value}
-                  </span>
-                  <span className="mt-1.5 block text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
-                    {s.label}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </aside>
 

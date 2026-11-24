@@ -11,6 +11,7 @@ import {
   PackageSearch,
   Settings,
   Sparkles,
+  Store,
   Tags,
   Users,
   Warehouse,
@@ -26,7 +27,8 @@ import { cn } from "@/lib/utils";
  * The panel's navigation rail.
  *
  * Grouped by what someone is trying to do, not by table name: Today is the
- * queue, Catalogue is what we sell, People is who buys it. Only modules that
+ * queue, Catalogue is what we sell, Network is who grows it, People is who buys
+ * it. Only modules that
  * exist are listed — a sidebar full of dead links that bounce to a 404 makes an
  * operator distrust everything else on the screen.
  */
@@ -45,6 +47,10 @@ const GROUPS = [
       { href: "/admin/inventory", label: "Inventory", Icon: Warehouse },
       { href: "/admin/categories", label: "Categories", Icon: Tags },
     ],
+  },
+  {
+    label: "Network",
+    items: [{ href: "/admin/partners", label: "Nurseries", Icon: Store }],
   },
   {
     label: "People",

@@ -47,6 +47,20 @@ in the same transaction is a table that is briefly world-writable.
 | `0022_revoke_trigger_execute.sql` | Removes RPC exposure from the `handle_new_customer` trigger |
 | `0023_customer_from_metadata.sql` | Customers keyed on signup metadata, not `auth.users.phone`; unique phone |
 | `0024_admin_usernames.sql` | `admin_users.username` as real data; staff auth moved to `@staff.ecoplants.my` |
+| `0025_remove_fabricated_ratings.sql` | Clears the seeded ratings and review counts no review ever backed, and the `peninsular_only` flags |
+| `0026_west_malaysia_only.sql` | `place_order()` refuses Sabah, Sarawak and Labuan on the address, whatever is in the basket |
+| `0027_product_images.sql` | The public `product-images` bucket, its admin-only write policies, admin writes on `product_images` |
+| `0028_new_arrivals_and_category_images.sql` | `products.new_until` (new arrivals that expire on their own) and category cover images |
+| `0029_quiz_responses_by_ref.sql` | Quiz responses store product refs, not uuids |
+| `0030_record_quiz_response.sql` | `record_quiz_response()`: an upsert through one function, not an `anon` UPDATE grant |
+| `0031_inventory_row_per_variant.sql` | A trigger gives every new variant its inventory row, so the panel can add products |
+| `0032_partners.sql` | Partner nurseries ([ADR 0009](../docs/decisions/0009-partner-nursery-network.md)): `partners` with the seeded house row, `partner_offers`, owner-only `partner_payout_accounts`, `is_admin_at_least()` |
+
+**0032 was applied on 2026-11-24** through the Management API's migrations
+endpoint, so it is in `supabase_migrations.schema_migrations` as
+`0032_partners`. Before that it was run, with every migration before it and the
+catalogue seed, on a local Postgres (PGlite) with a stand-in for Supabase's
+`auth` and `storage` schemas. Both runs were probed — see [Partners](#partners).
 
 ## Seeds
 
@@ -90,6 +104,48 @@ receipt page is already built on. Holding it already grants read access, so
 claiming grants nothing new. It refuses an order owned by someone else, so a
 forwarded link cannot take an order off its buyer. See
 [ADR 0008](../docs/decisions/0008-customer-accounts-by-phone.md).
+
+## Partners
+
+Partner nurseries, from [ADR 0009](../docs/decisions/0009-partner-nursery-network.md).
+EcoPlants stays the seller; a nursery is a supplier paid an agreed **net
+price** per plant. Nothing that places or moves an order reads these tables
+yet — routing is a later migration.
+
+- **`partners`** holds every fulfiller. Exactly one row is `kind = 'house'` —
+  EcoPlants' own stock, seeded by 0032 and guarded by a partial unique index.
+  `kind` is not in the UPDATE grant, so it is fixed once a row exists. There is
+  no DELETE policy: a nursery that stops is `ended`, because orders will point
+  at it. WhatsApp numbers go through `normalise_my_phone()` on the way in, and a
+  number it cannot read is refused by name. The location must sit inside
+  Malaysia's bounding box, which also catches latitude and longitude pasted the
+  wrong way round.
+- **`partner_offers`** is which variants a nursery stocks, its net price and
+  `available` / `limited` / `out`. **The house has no offers** — what it stocks
+  is `inventory`, already counted and audited — and a trigger refuses one, so
+  the rule holds for SECURITY DEFINER functions too. `updated_by` is stamped
+  from the session.
+- **`partner_payout_accounts`** is where a nursery is paid. Every policy is
+  `is_admin_at_least('owner')`; a staff session reads zero rows and writes
+  nothing.
+
+`anon` has no privileges on any of the three. When the storefront needs a
+nursery's name ("Grown by …"), it will get it from a SECURITY DEFINER function,
+as receipts already do.
+
+Probed on local Postgres, and again on the live project inside one
+transaction that raises its own report and so rolls every fixture back
+(afterwards: 1 partner, 0 offers, 0 accounts, no probe users). On both:
+a second house, a house added through the panel, a landline, swapped
+coordinates, half a coordinate pair, closing before opening, an unknown day,
+a `kind` change, an offer on the house, a negative net price, a staff write to
+bank details and a letter in an account number are all refused; a staff
+`update` and `delete` on what it may not touch affect zero rows; WhatsApp
+`012-345 6789` is stored as `+60123456789`; offers and bank details are stamped
+with the right admin; a customer reads zero rows of all three tables; `anon` is
+refused outright. Locally, deleting a variant removes its offers. On the live
+REST API with the publishable key, all three tables answer `42501 permission
+denied`, and every select the panel issues for them parses and resolves.
 
 ## Placing an order
 
@@ -266,6 +322,9 @@ inside — where the linter cannot see them.
   expressions are evaluated as the querying role, so revoking it would break
   every policy that consults it. It only ever reports on the caller's own
   session. Revoked from `anon` in 0012.
+- **`is_admin_at_least()` is executable by `authenticated`** (0032), for the
+  same reason: the owner-only policies on `partner_payout_accounts` call it. It
+  answers only for the caller's own session, and `anon` cannot execute it.
 - **Leaked password protection is disabled.** An Auth setting, not schema. Turn
   it on in the dashboard before real staff accounts exist.
 

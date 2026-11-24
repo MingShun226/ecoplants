@@ -120,3 +120,53 @@ export const BADGE_KEYS = [
  * build error, not a lint warning.
  */
 export const MAX_IMAGES_PER_PRODUCT = 9;
+
+// ---------------------------------------------------------------- network --
+// Partner nurseries (ADR 0009). The database enums are the whole set; these
+// lists exist so the forms never offer a value Postgres would refuse.
+
+export type PartnerKind = "house" | "nursery";
+export type PartnerStatus = "onboarding" | "active" | "paused" | "ended";
+export type OfferAvailability = "available" | "limited" | "out";
+
+export const PARTNER_STATUSES: PartnerStatus[] = ["onboarding", "active", "paused", "ended"];
+
+export const PARTNER_STATUS_LABEL: Record<PartnerStatus, string> = {
+  onboarding: "Onboarding",
+  active: "Active",
+  paused: "Paused",
+  ended: "Ended",
+};
+
+/** One line each, for the status picker — what the status actually does. */
+export const PARTNER_STATUS_HINT: Record<PartnerStatus, string> = {
+  onboarding: "Being signed up. Not given orders yet.",
+  active: "Given orders when it is open and in range.",
+  paused: "Not given orders until someone sets it back to Active.",
+  ended: "No longer a partner. Kept for the orders it fulfilled.",
+};
+
+export const OFFER_AVAILABILITIES: OfferAvailability[] = ["available", "limited", "out"];
+
+export const OFFER_AVAILABILITY_LABEL: Record<OfferAvailability, string> = {
+  available: "Available",
+  limited: "Few left",
+  out: "Out",
+};
+
+/** Pickup days, in the order a week is read in Malaysia. */
+export const PICKUP_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+export type PickupDay = (typeof PICKUP_DAYS)[number];
+
+export const PICKUP_DAY_LABEL: Record<PickupDay, string> = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+};
+
+/** `null` is closed that day. Times are "HH:MM", 24-hour, Malaysia time. */
+export type PickupHours = Partial<Record<PickupDay, { open: string; close: string } | null>>;

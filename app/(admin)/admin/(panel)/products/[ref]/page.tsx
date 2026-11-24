@@ -14,7 +14,9 @@ import { AiAssistCard, AiAssistProvider } from "@/components/admin/ai-assist";
 import { ImageManager } from "@/components/admin/image-manager";
 import { NewArrivalControl } from "@/components/admin/misc-forms";
 import { NewVariantForm, VariantEditor } from "@/components/admin/variant-editor";
+import { ProductNurseries } from "@/components/admin/partner-forms";
 import { getProduct, listCategories } from "@/lib/admin/catalogue";
+import { listNurseryOptions, listOffersForVariants } from "@/lib/admin/partners";
 import { formatSen } from "@/lib/admin/format";
 import { MAX_IMAGES_PER_PRODUCT } from "@/lib/admin/enums";
 
@@ -36,6 +38,12 @@ export default async function ProductDetailPage({
   const { ref } = await params;
   const [product, categories] = await Promise.all([getProduct(ref), listCategories()]);
   if (!product) notFound();
+
+  const [offers, nurseries] = await Promise.all([
+    listOffersForVariants(product.variants.map((v) => v.id)),
+    listNurseryOptions(),
+  ]);
+  const stockingNurseries = new Set(offers.map((o) => o.partnerId)).size;
 
   const englishSlug = product.translations.find((t) => t.locale === "en")?.slug;
 
@@ -144,6 +152,26 @@ export default async function ProductDetailPage({
                 A shop that later stocks a second pot size can say so now. */}
             <NewVariantForm productId={product.id} />
           </AdminCard>
+
+          {/* Partner nurseries (ADR 0009). The price above is what every
+              customer pays; this is what each nursery is paid for one, and
+              the difference is the margin. Folded once something is set up,
+              because week to week it is edited from the nursery's own screen. */}
+          {product.variants.length > 0 ? (
+            <AdminCard
+              title="Nurseries"
+              lead={
+                stockingNurseries === 0
+                  ? "No partner nursery stocks this yet. EcoPlants' own stock is in the sizes above."
+                  : `${stockingNurseries} ${stockingNurseries === 1 ? "nursery stocks" : "nurseries stock"} this, as well as EcoPlants' own stock above.`
+              }
+              flush
+              collapsible
+              defaultOpen={stockingNurseries === 0 && nurseries.length > 0}
+            >
+              <ProductNurseries variants={product.variants} offers={offers} nurseries={nurseries} />
+            </AdminCard>
+          ) : null}
 
           {/* Set once when the plant is first listed, then left alone for
               years. Folded so the screen reads as "add photos" rather than as

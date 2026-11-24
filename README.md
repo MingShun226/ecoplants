@@ -50,6 +50,7 @@ unambiguous and there is no unprefixed duplicate of the default locale.
 | `/admin` | Overview: queue counts, trade, top sellers, low stock |
 | `/admin/products` · `/[ref]` | Catalogue: copy in three locales, prices, attributes, visibility |
 | `/admin/inventory` | Stock levels, adjustments, movement ledger |
+| `/admin/partners` · `/new` · `/[slug]` | Partner nurseries ([ADR 0009](docs/decisions/0009-partner-nursery-network.md)): status, closed today, location, pickup hours, the plants each stocks at its net price, owner-only bank details. Needs migration 0032 |
 | `/admin/categories` | Order and copy |
 | `/admin/customers` · `/[email]` | Who has ordered, and their history |
 | `/admin/reviews` | Moderation queue |

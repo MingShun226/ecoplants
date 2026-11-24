@@ -1,5 +1,5 @@
-import { Menu, ShieldCheck } from "lucide-react";
-import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import { Menu, Sprout } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { HeaderActions, type SearchEntry } from "@/components/layout/header-actions";
 import { HeaderShell } from "@/components/layout/header-shell";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -10,8 +10,6 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { categoryHref } from "@/lib/data/facets";
 import { getCategories, getProducts } from "@/lib/data/queries";
-import { getSettings } from "@/lib/data/settings";
-import { toMajor } from "@/lib/utils/format";
 import { difficultyKeys, lightKeys, waterKeys } from "@/lib/data/facets";
 import { fromPriceSen } from "@/types/catalog";
 
@@ -21,12 +19,9 @@ import { fromPriceSen } from "@/types/catalog";
  * strip and wordmark all ship as static markup.
  */
 export async function SiteHeader() {
-  const settings = await getSettings();
   const tn = await getTranslations("nav");
-  const tg = await getTranslations("guarantee");
-  const ts = await getTranslations("shipping");
+  const th = await getTranslations("home");
   const tAttr = await getTranslations("attributes");
-  const format = await getFormatter();
   const locale = (await getLocale()) as Locale;
 
   // Short labels in the bar, full names on the category pages themselves — a
@@ -92,21 +87,19 @@ export async function SiteHeader() {
     };
   });
 
+  // What makes this shop different, in three short claims. On a narrow
+  // desktop only the first fits beside the language menu.
   const strip = (
-    <div className="container-page flex items-center justify-between gap-6 py-2">
-      <p className="flex items-center gap-2 text-[11px] tracking-wide text-text-secondary">
-        <ShieldCheck className="size-3.5 text-clay-600" aria-hidden="true" />
-        {tg("headline", { days: settings.guaranteeDays })}
-        <span aria-hidden="true" className="mx-1 text-border-strong">
-          ·
+    <div className="container-page flex items-center justify-between gap-6 py-1.5">
+      <p className="flex items-center gap-x-6 text-[12px] font-medium text-leaf-950">
+        <span className="flex items-center gap-2">
+          <Sprout className="size-3.5" aria-hidden="true" />
+          {th("stripA")}
         </span>
-        <span className="hidden lg:inline">
-          {ts("freeOver", {
-            amount: format.number(toMajor(settings.freeShippingThresholdSen), "currencyWhole"),
-          })}
-        </span>
+        <span className="hidden lg:inline">{th("stripB")}</span>
+        <span className="hidden xl:inline">{th("stripC")}</span>
       </p>
-      <LocaleSwitcher />
+      <LocaleSwitcher className="text-leaf-950 hover:text-ink-950" />
     </div>
   );
 
@@ -138,15 +131,7 @@ export async function SiteHeader() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  /*
-                   * 70% is a quiet nav on the cream bar, where the ink is
-                   * nearly black and holding it back is what keeps the links
-                   * from shouting. Over the hero the same 70% is cream on a
-                   * dark photograph, which is not quiet — it is hard to read.
-                   * `data-over-dark` is already on the header, so the dimming
-                   * simply does not apply there.
-                   */
-                  className="relative block py-2 text-sm tracking-wide opacity-70 transition-opacity duration-300 ease-refined after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 after:ease-refined hover:opacity-100 hover:after:scale-x-100 [[data-over-dark]_&]:opacity-100"
+                  className="relative block py-2 text-[15px] font-medium opacity-80 transition-opacity duration-300 ease-refined after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 after:ease-refined hover:opacity-100 hover:after:scale-x-100"
                 >
                   {item.label}
                 </Link>

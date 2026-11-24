@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Marcellus, Zilla_Slab } from "next/font/google";
+import { Fraunces, Inter, Zilla_Slab } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -11,7 +11,7 @@ import { AppProviders } from "./providers";
 import "../globals.css";
 
 /**
- * Marcellus for display, Inter for interface, Zilla Slab for the wordmark alone
+ * Fraunces for display, Inter for interface, Zilla Slab for the wordmark alone
  * — one display voice, one UI voice, and one fixed piece of lettering that
  * belongs to the logo rather than to the page.
  *
@@ -30,17 +30,16 @@ const inter = Inter({
 });
 
 /**
- * The display face: Marcellus, a roman inscriptional serif.
+ * The display face: Fraunces, a soft old-style serif with a true drawn italic.
  *
- * One weight, and that is the point rather than a limitation — the letterforms
- * are cut, not drawn, and a synthesised bold would smear the very thing that
- * makes them worth using. Everywhere the old face leaned on weight for emphasis
- * now leans on size, space or colour instead.
+ * Variable, so headings can sit at a medium weight, and the italic is what
+ * carries the two-tone headline ("…from the nursery *next door.*") — a change
+ * of voice inside one family rather than a second typeface.
  */
-const marcellus = Marcellus({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-marcellus",
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
@@ -117,9 +116,9 @@ export default async function LocaleLayout({
   return (
     <html
       lang={LOCALE_HREFLANG[locale]}
-      className={`${inter.variable} ${marcellus.variable} ${zillaSlab.variable}`}
+      className={`${inter.variable} ${fraunces.variable} ${zillaSlab.variable}`}
     >
-      <body className="min-h-dvh antialiased">
+      <body className="shop min-h-dvh antialiased">
         <NextIntlClientProvider>
           <AppProviders>{children}</AppProviders>
           <Toaster position="bottom-right" />

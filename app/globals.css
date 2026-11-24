@@ -329,7 +329,7 @@
      serifs — the right pairing for a serif display face, where the sans stack
      would have been the wrong one. */
   --font-display:
-    var(--font-marcellus), "Songti SC", "Noto Serif CJK SC",
+    var(--font-fraunces), "Songti SC", "Noto Serif CJK SC",
     "Source Han Serif SC", "SimSun", ui-serif, Georgia, serif;
 
   /* The wordmark only. Kept out of the display token deliberately: the name
@@ -812,4 +812,80 @@
    and every `font-display` in the panel picks it up. */
 .admin-type {
   --font-display: var(--font-lora), Georgia, "Songti SC", "Noto Serif CJK SC", serif;
+}
+
+/* ============================================================================
+   SHOP — the storefront's theme (2026-11 redesign).
+
+   A scoped override on the storefront <body>, the same mechanism the panel
+   uses above: the customer side becomes warmer and rounder without touching
+   the admin panel, which has its own <body> and never carries this class.
+
+   Cream paper, deep leaf green for actions, terracotta for emphasis, a soft
+   serif for headings and generous rounding. The shadcn contract is restated
+   because those variables were resolved against :root's values and would
+   otherwise keep them.
+   ========================================================================= */
+.shop {
+  --shop-green: oklch(0.43 0.085 150);
+  --shop-green-deep: oklch(0.36 0.075 150);
+  --shop-butter: oklch(0.915 0.085 95);
+  --shop-peach: oklch(0.885 0.055 50);
+  --shop-sage: oklch(0.915 0.035 135);
+  --shop-sand: oklch(0.915 0.035 85);
+
+  --canvas: oklch(0.972 0.014 85);
+  --surface: oklch(0.995 0.006 85);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.94 0.022 85);
+  --border-subtle: oklch(0.905 0.02 82);
+  --border-default: oklch(0.86 0.024 80);
+  --text-accent: var(--color-clay-700);
+
+  --background: var(--canvas);
+  --card: var(--surface);
+  --popover: var(--surface-raised);
+  --primary: var(--shop-green);
+  --primary-foreground: oklch(0.99 0.005 85);
+  --secondary: var(--surface-sunken);
+  --muted: var(--surface-sunken);
+  --accent: var(--shop-sage);
+  --accent-foreground: var(--color-leaf-950);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--shop-green);
+
+  --radius: 0.75rem;
+
+  --font-display:
+    var(--font-fraunces), "Songti SC", "Noto Serif CJK SC",
+    "Source Han Serif SC", "SimSun", ui-serif, Georgia, serif;
+}
+
+.shop h1,
+.shop h2,
+.shop h3,
+.shop h4 {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+/* The second half of a headline: the drawn italic, in terracotta. */
+.shop .display-accent {
+  font-style: italic;
+  color: var(--color-clay-700);
+  letter-spacing: -0.015em;
+}
+/* CJK has no italic; a slanted Songti reads as a rendering fault. */
+.shop:lang(zh) .display-accent,
+:lang(zh) .shop .display-accent {
+  font-style: normal;
+}
+
+/* The light panel inside a dark region restates the shop's surfaces too. */
+.shop .on-canvas-tokens {
+  --surface: oklch(0.995 0.006 85);
+  --surface-sunken: oklch(0.94 0.022 85);
+  --border-subtle: oklch(0.905 0.02 82);
+  --border-default: oklch(0.86 0.024 80);
 }

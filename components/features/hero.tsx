@@ -1,122 +1,64 @@
-import { ArrowRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { ArrowRight, Truck } from "lucide-react";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
-import { LightIcon } from "@/components/features/care";
+import { PlantImage } from "@/components/brand/plant-image";
 import { Link } from "@/i18n/navigation";
-import { quizQuestions } from "@/lib/data/quiz";
-/*
- * The sharper of the two backdrops.
- *
- * `hero.webp` is 2560x1440 in 98 KB — roughly 27 bytes per thousand pixels,
- * which is where WebP stops resolving a leaf edge and starts smearing it. This
- * one is smaller in pixel terms and carries five times the data per pixel, and
- * a sharp 1672px source beats a soft 2560px one at every width this is drawn
- * at, on a phone especially.
- */
-import heroBackdrop from "@/public/images/hero-nursery.webp";
+import type { Locale } from "@/i18n/routing";
+import { toMajor } from "@/lib/utils/format";
+import greenhouse from "@/public/images/hero-nursery.webp";
+import { fromPriceSen, type Product } from "@/types/catalog";
 
 /**
- * The hero: one message, one action, one live object.
+ * The hero: what the shop is, in one screen, on the page's own cream ground.
  *
- * Deliberately a server component. The entrance choreography is CSS
- * (`rise-in-lg`), so the markup is complete and correct even if no bundle ever
- * loads — a motion `initial` state would write opacity:0 into the server HTML
- * and blank the first screen on a failed bundle.
+ * Copy on the left, a small collage on the right — a plant you can buy today
+ * under an arch, the greenhouse it comes from, and the one promise that sets
+ * this shop apart (packed at the nursery, driven to you).
  *
- * The panel beside the headline is the plant finder's first question, asked
- * here rather than advertised. It replaced a board of four shortcuts into
- * filtered categories — the same four choices, but they dropped you into a
- * list, where this starts the thing that actually narrows it. Answering carries
- * through: the quiz reads the choice off the URL and opens on question two.
+ * A server component with CSS-only entrance motion (`rise-in-lg`), so the
+ * markup is complete and visible even if no bundle ever loads.
+ *
+ * The plant in the arch is a real product, passed in, and the whole tile links
+ * to it. With nothing in the catalogue the arch shows the greenhouse instead
+ * and the collage drops to two tiles.
  */
-export async function Hero() {
+export async function Hero({ product }: { product?: Product }) {
   const t = await getTranslations("home");
-  const tn = await getTranslations("nav");
-  const tq = await getTranslations("quiz");
-
-  // Light. Its four values are the same strings as the `light` plant attribute,
-  // which is why LightIcon can draw them without a lookup table.
-  const firstQuestion = quizQuestions[0];
+  const locale = (await getLocale()) as Locale;
+  const format = await getFormatter();
+  const tr = product?.t[locale];
 
   return (
-    <section className="on-dark relative isolate overflow-hidden bg-[oklch(0.185_0.024_146)]">
-      {/* A photograph, not a drawing: a monstera against a dark apartment wall
-          at dusk, framed with its left two-thirds deliberately empty so the
-          headline has somewhere to sit. Decorative — the headline already says
-          what the page is — so it carries no alt text.
+    <section className="container-page grid items-center gap-10 pb-16 pt-8 md:pb-24 md:pt-12 lg:grid-cols-2 lg:gap-16">
+      {/* --- copy -------------------------------------------------------- */}
+      <div className="flex flex-col items-start gap-6">
+        <span
+          className="rise-in-lg rounded-full bg-[var(--shop-butter)] px-3.5 py-1.5 text-[13px] font-semibold text-ink-950"
+          style={{ animationDelay: "0.05s" }}
+        >
+          {t("heroBadge")}
+        </span>
 
-          `object-cover` means a tall viewport crops the sides. The subject sits
-          right of centre and the left of the frame is near-black, so a centre
-          crop on a phone lands on wall rather than on leaves, which is the half
-          that keeps the copy readable. */}
-      <Image
-        src={heroBackdrop}
-        alt=""
-        aria-hidden="true"
-        fill
-        // The LCP element on the site's most-visited page.
-        priority
-        // Higher than the site default: this is a dark, low-contrast photograph
-        // behind white text, and banding in the gradient shows badly there.
-        quality={90}
-        sizes="100vw"
-        className="-z-10 object-cover"
-      />
-
-      {/* Scrim. The photograph is already dark where the copy sits, but "already
-          dark" is not a contrast guarantee across every crop this takes at every
-          viewport, and the headline is the one thing here that has to stay
-          readable. The flat layer carries small screens, where the crop is
-          tightest and the copy runs full width; the angled layer weights the
-          left on wide ones and clears before it reaches the plant. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[oklch(0.185_0.024_146/0.5)] lg:bg-[oklch(0.185_0.024_146/0.12)]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background: [
-            "linear-gradient(to top, oklch(0.185 0.024 146 / 0.55) 0%, transparent 22%)",
-            "linear-gradient(100deg, oklch(0.185 0.024 146 / 0.92) 0%, oklch(0.185 0.024 146 / 0.66) 36%, transparent 70%)",
-          ].join(", "),
-        }}
-      />
-
-      <div className="container-page grid min-h-svh items-center gap-12 pb-16 pt-28 md:pt-32 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16">
-        {/* --- copy ------------------------------------------------------ */}
-        <div className="flex max-w-2xl flex-col items-start gap-6 [text-shadow:0_2px_24px_oklch(0.185_0.024_146/0.85)]">
-          <span
-            className="rise-in-lg text-[10.5px] font-medium uppercase tracking-[0.24em] text-leaf-300"
-            style={{ animationDelay: "0.05s" }}
-          >
-            {t("heroEyebrow")}
+        <h1 className="text-[clamp(2.6rem,1.4rem+5vw,4.9rem)] leading-[1.02]">
+          <span className="rise-in-lg block" style={{ animationDelay: "0.12s" }}>
+            {t("heroTitle")}
           </span>
+          <span className="display-accent rise-in-lg block" style={{ animationDelay: "0.2s" }}>
+            {t("heroTitleAccent")}
+          </span>
+        </h1>
 
-          <h1 className="text-[clamp(2.5rem,1.3rem+4.2vw,4.25rem)] leading-[1.06] text-ink-50">
-            <span className="rise-in-lg block" style={{ animationDelay: "0.12s" }}>
-              {t("heroTitle")}
-            </span>
-            <span
-              className="display-accent rise-in-lg block text-leaf-300"
-              style={{ animationDelay: "0.2s" }}
-            >
-              {t("heroTitleAccent")}
-            </span>
-          </h1>
+        <p
+          className="rise-in-lg max-w-lg text-[17px] leading-relaxed text-text-secondary md:text-[19px]"
+          style={{ animationDelay: "0.3s" }}
+        >
+          {t("heroLead")}
+        </p>
 
-          <p
-            className="rise-in-lg max-w-xl text-[16px] leading-relaxed text-text-secondary md:text-[17px]"
-            style={{ animationDelay: "0.3s" }}
-          >
-            {t("heroLead")}
-          </p>
-
+        <div className="rise-in-lg mt-1 flex flex-wrap gap-3" style={{ animationDelay: "0.4s" }}>
           <Link
             href="/plants"
-            className="rise-in-lg group mt-2 inline-flex items-center gap-2.5 rounded-full bg-ink-50 px-7 py-3.5 text-sm font-medium text-ink-950 transition-colors duration-300 hover:bg-leaf-300"
-            style={{ animationDelay: "0.42s" }}
+            className="group inline-flex items-center gap-2.5 rounded-full bg-clay-700 px-7 py-4 text-[15px] font-semibold text-ink-50 transition-colors duration-300 hover:bg-clay-800"
           >
             {t("heroCta")}
             <ArrowRight
@@ -124,58 +66,62 @@ export async function Hero() {
               aria-hidden="true"
             />
           </Link>
+          <Link
+            href="/quiz"
+            className="inline-flex items-center rounded-full border-2 border-ink-950 px-7 py-[14px] text-[15px] font-semibold transition-colors duration-300 hover:bg-ink-950 hover:text-ink-50"
+          >
+            {t("heroFinder")}
+          </Link>
+        </div>
+      </div>
+
+      {/* --- collage ----------------------------------------------------- */}
+      <div
+        className="rise-in-lg grid grid-cols-2 gap-3 sm:gap-4"
+        style={{ animationDelay: "0.2s" }}
+      >
+        {/* The arch. */}
+        {product && tr ? (
+          <Link
+            href={`/plants/${tr.slug}`}
+            aria-label={tr.name}
+            className="group relative row-span-2 min-h-[22rem] overflow-hidden rounded-b-[2rem] rounded-t-[999px] bg-surface-sunken sm:min-h-[30rem]"
+          >
+            <PlantImage
+              product={product}
+              priority
+              sizes="(max-width: 1024px) 50vw, 25vw"
+              className="transition-transform duration-[1100ms] ease-refined group-hover:scale-[1.04]"
+            />
+            <span className="numeric absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-surface-raised px-4 py-2.5 text-[13px] font-semibold shadow-sm sm:text-sm">
+              {tr.name} · {format.number(toMajor(fromPriceSen(product)), "currencyWhole")}
+            </span>
+          </Link>
+        ) : null}
+
+        <div
+          className={
+            product
+              ? "relative min-h-[10.5rem] overflow-hidden rounded-[2rem] bg-surface-sunken sm:min-h-[14.5rem]"
+              : "relative row-span-2 min-h-[22rem] overflow-hidden rounded-b-[2rem] rounded-t-[999px] bg-surface-sunken sm:min-h-[30rem]"
+          }
+        >
+          <Image
+            src={greenhouse}
+            alt={t("heroPhotoAlt")}
+            fill
+            priority={!product}
+            sizes="(max-width: 1024px) 50vw, 25vw"
+            className="object-cover"
+          />
         </div>
 
-        {/* --- the plant finder ------------------------------------------ */}
-        <aside
-          aria-label={tn("quiz")}
-          className="rise-in-lg w-full overflow-hidden rounded-xl border border-leaf-400/30 bg-ink-950/70 backdrop-blur-md"
-          style={{ animationDelay: "0.25s" }}
-        >
-          <div className="flex flex-col gap-2 border-b border-ink-50/12 px-6 py-5">
-            <span className="text-[10.5px] font-semibold uppercase tracking-[0.2em] text-leaf-300">
-              {tn("quiz")}
-            </span>
-            <p className="text-[15px] leading-snug text-ink-50">{tq("q1")}</p>
-          </div>
-
-          <div>
-            {firstQuestion.options.map((option) => (
-              <Link
-                key={option.value}
-                // Answering here answers it for real: the quiz reads this off
-                // the URL and opens on question two. The board this replaced
-                // was a shortcut into a filtered category — the same four
-                // choices, but they dropped you into a list instead of
-                // starting the thing that narrows it.
-                href={{ pathname: "/quiz", query: { [firstQuestion.id]: option.value } }}
-                className="group flex items-start gap-3.5 border-b border-ink-50/12 px-6 py-3.5 transition-colors duration-300 last:border-b-0 hover:bg-ink-50/5"
-              >
-                <LightIcon
-                  level={option.value as Parameters<typeof LightIcon>[0]["level"]}
-                  className="mt-0.5 size-4 shrink-0 text-leaf-300"
-                />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] text-ink-50">{tq(option.labelKey)}</span>
-                  {option.hintKey ? (
-                    <span className="text-xs leading-relaxed text-text-tertiary">
-                      {tq(option.hintKey)}
-                    </span>
-                  ) : null}
-                </span>
-                <ArrowRight
-                  className="mt-1 size-3.5 -translate-x-1 shrink-0 text-leaf-300 opacity-0 transition-all duration-300 ease-refined group-hover:translate-x-0 group-hover:opacity-100"
-                  aria-hidden="true"
-                />
-              </Link>
-            ))}
-          </div>
-
-          {/* What it costs to finish, so the first tap is an informed one. */}
-          <p className="numeric border-t border-ink-50/12 px-6 py-3.5 text-[12px] text-text-tertiary">
-            {quizQuestions.length} {t("quizStatQuestions")} · 60s {t("quizStatTime")}
+        <div className="flex min-h-[10.5rem] flex-col justify-between gap-4 rounded-[2rem] bg-[var(--shop-green)] p-5 text-ink-50 sm:min-h-[14.5rem] sm:p-7">
+          <Truck className="size-8" strokeWidth={1.6} aria-hidden="true" />
+          <p className="font-display text-[17px] font-medium leading-tight sm:text-[23px]">
+            {t("heroTile")}
           </p>
-        </aside>
+        </div>
       </div>
     </section>
   );
